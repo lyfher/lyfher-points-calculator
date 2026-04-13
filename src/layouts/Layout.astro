@@ -1,0 +1,113 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "DeFi points calculators. Maximize your airdrop rewards." } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="bg-gray-950 text-gray-100 min-h-screen">
+    <!-- Navbar -->
+    <nav class="border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-50">
+      <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <!-- Brand -->
+        <div class="flex items-center gap-3">
+          <span class="font-bold text-lg text-white hover:text-blue-400 transition-colors whitespace-nowrap cursor-default select-none">
+            ⚡ Lyfher Points Calculator
+          </span>
+          <a
+            href="https://twitter.com/LyfherCrypto"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-gray-500 hover:text-sky-400 text-sm transition-colors hidden sm:block"
+          >
+            @LyfherCrypto
+          </a>
+        </div>
+
+        <!-- Language toggle -->
+        <div class="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+          <button
+            id="lang-en"
+            onclick="setLang('en')"
+            class="px-2.5 py-1 rounded text-sm font-medium transition-colors"
+          >
+            EN
+          </button>
+          <button
+            id="lang-es"
+            onclick="setLang('es')"
+            class="px-2.5 py-1 rounded text-sm font-medium transition-colors"
+          >
+            ES
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="max-w-4xl mx-auto px-4 py-6">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 mt-20">
+      <div class="max-w-4xl mx-auto px-4 py-6 text-center text-gray-600 text-sm">
+        <span
+          data-en="Calculations are estimates based on public formulas. Not a guarantee of actual rewards."
+          data-es="Los cálculos son estimaciones basadas en fórmulas públicas. No son garantía de recompensas reales."
+        >
+          Calculations are estimates based on public formulas. Not a guarantee of actual rewards.
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<script is:inline>
+  function applyLang(lang) {
+    // Swap text content
+    document.querySelectorAll('[data-en]').forEach(el => {
+      el.textContent = lang === 'es' ? el.dataset.es : el.dataset.en;
+    });
+    // Swap placeholders
+    document.querySelectorAll('[data-placeholder-en]').forEach(el => {
+      el.placeholder = lang === 'es' ? el.dataset.placeholderEs : el.dataset.placeholderEn;
+    });
+    // Update toggle button styles
+    const enBtn = document.getElementById('lang-en');
+    const esBtn = document.getElementById('lang-es');
+    if (enBtn && esBtn) {
+      enBtn.className = lang === 'en'
+        ? 'px-2.5 py-1 rounded text-sm font-medium bg-blue-600 text-white'
+        : 'px-2.5 py-1 rounded text-sm font-medium text-gray-400 hover:text-white';
+      esBtn.className = lang === 'es'
+        ? 'px-2.5 py-1 rounded text-sm font-medium bg-blue-600 text-white'
+        : 'px-2.5 py-1 rounded text-sm font-medium text-gray-400 hover:text-white';
+    }
+    document.documentElement.lang = lang;
+    localStorage.setItem('lang', lang);
+  }
+
+  function setLang(lang) {
+    applyLang(lang);
+  }
+
+  // Apply on load
+  const saved = localStorage.getItem('lang') || 'en';
+  applyLang(saved);
+</script>

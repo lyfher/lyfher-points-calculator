@@ -1,0 +1,17 @@
+---
+interface Props {
+  logoSrc?: string;
+  logoEmoji: string;
+  name: string;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const { logoSrc, logoEmoji, name, size = 'md' } = Astro.props;
+const sizeClass = size === 'sm' ? 'w-6 h-6 text-xl' : size === 'lg' ? 'w-12 h-12 text-5xl' : 'w-8 h-8 text-3xl';
+---
+
+{logoSrc
+  ? <img src={logoSrc} alt={name} class={`${sizeClass} object-contain`} onerror="this.style.display='none';this.nextElementSibling.style.display='inline'" />
+  : null
+}
+<span class={`${sizeClass} ${logoSrc ? 'hidden' : ''}`} aria-hidden="true">{logoEmoji}</span>

@@ -1,0 +1,84 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { projects } from '../data/projects';
+import ProjectLogo from '../components/ProjectLogo.astro';
+---
+
+<Layout title="Lyfher Points Calculator — Perpetuals Points Calculator">
+  <!-- Hero -->
+  <section class="text-center py-12">
+    <h1 class="text-4xl sm:text-5xl font-bold text-white mb-4">
+      <span data-en="Points" data-es="Calculadora de">Points</span>
+      <span class="text-blue-400"> Calculator</span>
+    </h1>
+    <p
+      class="text-gray-400 text-lg max-w-xl mx-auto"
+      data-en="Estimate how many points you're accumulating on the best protocols and maximize your airdrop rewards."
+      data-es="Estima cuántos puntos estás acumulando en los mejores protocolos y maximiza tus recompensas."
+    >
+      Estimate how many points you're accumulating on the best protocols and maximize your airdrop rewards.
+    </p>
+  </section>
+
+  <!-- Compare CTA -->
+  <div class="flex justify-center mb-8">
+    <a href="/compare"
+       class="inline-flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-gray-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
+      ⚖️ <span data-en="Compare all projects" data-es="Comparar todos los proyectos">Compare all projects</span>
+      <span class="text-gray-500">→</span>
+    </a>
+  </div>
+
+  <!-- Project Cards -->
+  <section class="grid gap-6 sm:grid-cols-2">
+    {projects.map((project) => (
+      <a
+        href={`/${project.slug}`}
+        class="group block bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-gray-600 hover:bg-gray-800 transition-all duration-200"
+      >
+        <div class="flex items-center gap-3 mb-3">
+          <ProjectLogo logoSrc={project.logoSrc} logoEmoji={project.logoEmoji} name={project.name} size="md" />
+          <h2 class="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
+            {project.name}
+          </h2>
+        </div>
+        <p
+          class="text-gray-400 text-sm leading-relaxed mb-4"
+          data-en={project.description}
+          data-es={project.descriptionEs}
+        >
+          {project.description}
+        </p>
+        <span
+          class="text-blue-400 text-sm font-medium"
+          data-en="Calculate points →"
+          data-es="Calcular puntos →"
+        >
+          Calculate points →
+        </span>
+      </a>
+    ))}
+
+    <!-- More coming soon -->
+    <div class="bg-gray-900/50 border border-dashed border-gray-800 rounded-2xl p-6 flex items-center justify-center">
+      <p
+        class="text-gray-600 text-sm text-center"
+        data-en="🔜 More projects coming soon"
+        data-es="🔜 Más proyectos próximamente"
+      >
+        🔜 More projects coming soon
+      </p>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="mt-10 border-t border-gray-800 pt-6 text-center">
+    <p
+      class="text-gray-600 text-sm max-w-xl mx-auto"
+      data-en="Enter your points balance for any perpetuals protocol and instantly see their USD value across bear, base, and bull scenarios — then compare across projects to decide where to focus."
+      data-es="Ingresa tu balance de puntos en cualquier protocolo de perpetuos y ve al instante su valor en USD en escenarios bajista, normal y optimista — luego compara entre proyectos para decidir dónde enfocarte."
+    >
+      Enter your points balance for any perpetuals protocol and instantly see their USD value across bear, base, and bull scenarios — then compare across projects to decide where to focus.
+    </p>
+  </section>
+</Layout>
