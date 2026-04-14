@@ -55,7 +55,7 @@ const accent = project.accentHex;
       <label class="block text-xs text-gray-500 mb-1" for="my-points"
              data-en="My total points" data-es="Mis puntos totales">My total points</label>
       <input
-        type="number" id="my-points" placeholder="0" min="0"
+        type="number" id="my-points" placeholder="0" min="0" max="1000000"
         class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-white text-xl font-bold placeholder-gray-700 focus:outline-none transition-colors"
         style={`--tw-ring-color: ${accent}; outline: none;`}
         onfocus={`this.style.borderColor='${accent}80'`}
@@ -174,5 +174,9 @@ const accent = project.accentHex;
   const price = document.getElementById('custom-price');
   range?.addEventListener('input', () => { price.value = range.value; update(); });
   price?.addEventListener('input', () => { range.value = Math.min(parseFloat(price.value)||0, projectSliderMax); update(); });
-  document.getElementById('my-points')?.addEventListener('input', update);
+  document.getElementById('my-points')?.addEventListener('input', (e) => {
+    const el = e.target as HTMLInputElement;
+    if (parseFloat(el.value) > 1000000) el.value = '1000000';
+    update();
+  });
 </script>
