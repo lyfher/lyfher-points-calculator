@@ -174,9 +174,9 @@ const accent = project.accentHex;
   const price = document.getElementById('custom-price');
   range?.addEventListener('input', () => { price.value = range.value; update(); });
   price?.addEventListener('input', () => { range.value = Math.min(parseFloat(price.value)||0, projectSliderMax); update(); });
-  document.getElementById('my-points')?.addEventListener('input', (e) => {
-    const el = e.target as HTMLInputElement;
-    if (parseFloat(el.value) > 1000000) el.value = '1000000';
+  const ptsInput = document.getElementById('my-points');
+  ptsInput?.addEventListener('input', () => {
+    if (parseFloat(ptsInput.value) > 1000000) ptsInput.value = '1000000';
     update();
   });
 </script>
