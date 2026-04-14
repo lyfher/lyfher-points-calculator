@@ -34,18 +34,6 @@ const accent = project.accentHex;
           </p>
         </div>
       </div>
-      <!-- $/pt quick reference -->
-      <div class="hidden sm:flex gap-3 text-center">
-        {project.scenarios.map((s, i) => (
-          <div>
-            <div class="text-xs text-gray-600">{s.emoji}</div>
-            <div class={`text-sm font-bold ${i===0?'text-red-400':i===1?'text-yellow-400':'text-green-400'}`}>
-              ${s.pricePerPoint}
-            </div>
-            <div class="text-xs text-gray-600" style={`color: ${accent}99`}>/pt</div>
-          </div>
-        ))}
-      </div>
     </div>
   </div>
 
