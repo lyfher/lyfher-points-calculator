@@ -53,6 +53,7 @@ const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs
             id={`pts-${project.slug}`}
             placeholder="0"
             min="0"
+            max="1000000"
             class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold placeholder-gray-700 focus:outline-none transition-colors text-sm"
             onfocus={`this.style.borderColor='${project.accentHex}80'`}
             onblur="this.style.borderColor=''"
@@ -178,7 +179,7 @@ const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs
     const totals = new Array(scenarioCount).fill(0);
 
     projectsData.forEach(project => {
-      const pts = parseFloat(document.getElementById(`pts-${project.slug}`)?.value) || 0;
+      const pts = Math.min(parseFloat(document.getElementById(`pts-${project.slug}`)?.value) || 0, 1000000);
       project.scenarios.forEach((s, i) => {
         const val = pts * s.pricePerPoint;
         totals[i] += val;
