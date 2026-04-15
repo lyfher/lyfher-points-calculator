@@ -83,7 +83,7 @@ export const projects: Project[] = [
     logoEmoji: "📐",
     logoSrc: "/logos/variational.jpg",
     accentHex: "#8B5CF6",
-    referralLink: "https://app.variational.io",
+    referralLink: "https://variational.io",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 50,
