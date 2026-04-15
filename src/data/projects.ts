@@ -88,9 +88,9 @@ export const projects: Project[] = [
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 10,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.5 },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 1 },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 2 },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0 },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 0 },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 0 },
     ],
   },
   {
