@@ -49,11 +49,26 @@ const scenarios = project.scenarios;
       />
     </div>
 
-    <!-- TBA pill -->
-    <div class="rounded-xl px-5 py-2.5 text-center" style="border:1px solid #4a3428; background:#2a1f19;">
+    <div class="flex-1 min-w-52">
+      <label class="block text-xs mb-1 font-medium" style="color:#C4B7BA;">
+        <span data-en="My price per point ($)" data-es="Mi precio por punto ($)">My price per point ($)</span>
+      </label>
+      <div class="flex items-center gap-2">
+        <input type="range" id="custom-price-range" min="0" max={String(project.sliderMax)} step="0.1" value="0"
+          class="flex-1 cursor-pointer" style="accent-color:#DD3756;" />
+        <input type="number" id="custom-price" placeholder="0.00" min="0" step="0.01"
+          class="w-20 rounded-xl px-3 py-2.5 text-center font-bold focus:outline-none transition-colors"
+          style="background:#2a1f19; border:1px solid #4a3428; color:#FFF2E2;"
+          onfocus="this.style.borderColor='#DD375680';"
+          onblur="this.style.borderColor='#4a3428';" />
+      </div>
+    </div>
+
+    <!-- Total pill -->
+    <div class="rounded-xl px-5 py-2.5 text-center" style="border:1px solid #DD375440; background:#DD375615;">
       <p class="text-xs mb-0.5" style="color:#C4B7BA;"
-         data-en="Price per point" data-es="Precio por punto">Price per point</p>
-      <p class="text-xl font-bold d-serif" style="color:#7a6058;">TBA</p>
+         data-en="Your value" data-es="Tu valor">Your value</p>
+      <p id="custom-total" class="text-xl font-bold d-serif" style="color:#FFF2E2;">$0.00</p>
     </div>
   </div>
 
