@@ -84,8 +84,8 @@ export const projects: Project[] = [
     logoSrc: "/logos/dangologo.jpg",
     accentHex: "#DD3756",
     referralLink: "https://dango.exchange?ref=6195",
-    referralBenefit: "Sign up with my link and get a 30% fee kickback",
-    referralBenefitEs: "Regístrate con mi link y obtén un 30% de rebate en fees",
+    referralBenefit: "Sign up with my link and get a 15% fee rebate",
+    referralBenefitEs: "Regístrate con mi link y obtén un 15% de rebate en fees",
     sliderMax: 10,
     scenarios: [
       { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0 },
