@@ -3,6 +3,8 @@ export interface Scenario {
   labelEs: string;
   emoji: string;
   pricePerPoint: number;
+  fdv?: string;        // e.g. "$50M", "$1.2B"
+  marketCap?: string;  // circulating mcap if different from FDV
 }
 
 export interface Project {
@@ -34,9 +36,9 @@ export const projects: Project[] = [
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 1,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.1 },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 0.2 },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 0.3 },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.1, fdv: "$50M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 0.2, fdv: "$100M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 0.3, fdv: "$200M" },
     ],
   },
   {
@@ -52,9 +54,9 @@ export const projects: Project[] = [
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 10,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 1 },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 2 },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 3 },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 1, fdv: "$100M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 2, fdv: "$200M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 3, fdv: "$400M" },
     ],
   },
   {
@@ -70,9 +72,9 @@ export const projects: Project[] = [
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 20,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 1 },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 3 },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 5 },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 1, fdv: "$100M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 3, fdv: "$300M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 5, fdv: "$500M" },
     ],
   },
   {
@@ -106,9 +108,9 @@ export const projects: Project[] = [
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 50,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 10 },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 15 },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 20 },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 10, fdv: "$200M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 15, fdv: "$400M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 20, fdv: "$800M" },
     ],
   },
   {
@@ -124,9 +126,9 @@ export const projects: Project[] = [
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 10,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.5 },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 1 },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 1.5 },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.5, fdv: "$50M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 1, fdv: "$100M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 1.5, fdv: "$200M" },
     ],
   },
 ];
