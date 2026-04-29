@@ -145,23 +145,4 @@ export const projects: Project[] = [
       { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 1.36, fdv: "$500M" },
     ],
   },
-  {
-    slug: "treadfi",
-    name: "TreadFi",
-    description: "Calculate the estimated value of your TreadFi points across different price scenarios.",
-    descriptionEs: "Calcula el valor estimado de tus puntos de TreadFi en distintos escenarios de precio.",
-    logoEmoji: "🤖",
-    accentHex: "#3B82F6",
-    totalPointsPool: 2_900_000,
-    fdvColumns: [20_000_000, 50_000_000, 75_000_000, 100_000_000, 200_000_000, 300_000_000],
-    referralLink: "https://app.tread.fi/referral/PODO5ZYR",
-    referralBenefit: "Sign up with my link for a 20% discount",
-    referralBenefitEs: "Regístrate con mi link y obtén 20% de descuento",
-    sliderMax: 10,
-    scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 2, fdv: "$20M" },
-      { label: "Base", labelEs: "Normal",  emoji: "📊", pricePerPoint: 4, fdv: "$75M" },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 6, fdv: "$150M" },
-    ],
-  },
 ];
