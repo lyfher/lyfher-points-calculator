@@ -88,13 +88,13 @@ const accent = project.accentHex;
             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-600 inline-block"></span> &lt;$1K</span>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div>
           <table class="w-full text-xs" id="fdv-matrix">
             <thead>
               <tr class="text-gray-600 uppercase border-b border-gray-800">
-                <th class="text-left pb-2 pr-2 font-semibold" data-en="Allocation %" data-es="Asignación %">Allocation %</th>
-                {['$10M','$25M','$50M','$100M','$250M','$500M','$1B'].map(fdv => (
-                  <th class="text-right pb-2 px-1 font-semibold whitespace-nowrap">{fdv} FDV</th>
+                <th class="text-left pb-2 pr-2 font-semibold" data-en="Allocation %" data-es="Asignación %">Alloc %</th>
+                {['$50M','$100M','$250M','$500M','$1B','$2B'].map(fdv => (
+                  <th class="text-right pb-2 px-1 font-semibold whitespace-nowrap">{fdv}</th>
                 ))}
               </tr>
             </thead>
@@ -102,7 +102,7 @@ const accent = project.accentHex;
               {[10, 15, 20, 25, 30].map(alloc => (
                 <tr>
                   <td class="py-3 pr-2 font-bold" style={`color: ${accent}`}>{alloc}%</td>
-                  {[10_000_000, 25_000_000, 50_000_000, 100_000_000, 250_000_000, 500_000_000, 1_000_000_000].map(fdvVal => (
+                  {[50_000_000, 100_000_000, 250_000_000, 500_000_000, 1_000_000_000, 2_000_000_000].map(fdvVal => (
                     <td class="py-3 px-1 text-right font-mono matrix-cell"
                         data-alloc={alloc} data-fdv={fdvVal}>
                       —
