@@ -159,9 +159,9 @@ export const projects: Project[] = [
     referralBenefitEs: "Regístrate con mi link y obtén 20% de descuento",
     sliderMax: 10,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.5,  fdv: "$10M" },
-      { label: "Base", labelEs: "Normal",  emoji: "📊", pricePerPoint: 1,    fdv: "$25M" },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 2,  fdv: "$50M" },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 2, fdv: "$20M" },
+      { label: "Base", labelEs: "Normal",  emoji: "📊", pricePerPoint: 4, fdv: "$75M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 6, fdv: "$150M" },
     ],
   },
 ];
