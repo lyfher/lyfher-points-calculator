@@ -14,6 +14,9 @@ export function getStaticPaths() {
 interface Props { project: Project; }
 const { project } = Astro.props;
 const accent = project.accentHex;
+const defaultFdvColumns = [50_000_000, 100_000_000, 250_000_000, 500_000_000, 1_000_000_000, 2_000_000_000];
+const fdvColumns = project.fdvColumns ?? defaultFdvColumns;
+const fdvLabels = fdvColumns.map(v => v >= 1_000_000_000 ? `$${v/1_000_000_000}B` : `$${v/1_000_000}M`);
 ---
 
 <Layout title={`${project.name} Points Calculator — Lyfher`} description={project.description}>
@@ -86,8 +89,8 @@ const accent = project.accentHex;
             <thead>
               <tr class="uppercase border-b border-gray-800 text-gray-600">
                 <th class="text-left pb-2 pr-2 font-semibold text-xs" data-en="Alloc %" data-es="Asig %">Alloc %</th>
-                {['$50M','$100M','$250M','$500M','$1B','$2B'].map(fdv => (
-                  <th class="text-right pb-2 px-3 font-semibold text-xs whitespace-nowrap">{fdv}</th>
+                {fdvLabels.map(label => (
+                  <th class="text-right pb-2 px-3 font-semibold text-xs whitespace-nowrap">{label}</th>
                 ))}
               </tr>
             </thead>
@@ -95,16 +98,9 @@ const accent = project.accentHex;
               {[10, 15, 20, 25, 30].map(alloc => (
                 <tr>
                   <td class="py-3 pr-2 font-bold" style={`color: ${accent}`}>{alloc}%</td>
-                  {[
-                    {fdv: 50_000_000,    group:'bear'},
-                    {fdv: 100_000_000,   group:'bear'},
-                    {fdv: 250_000_000,   group:'normal'},
-                    {fdv: 500_000_000,   group:'normal'},
-                    {fdv: 1_000_000_000, group:'bull'},
-                    {fdv: 2_000_000_000, group:'bull'},
-                  ].map(col => (
+                  {fdvColumns.map((fdvVal) => (
                     <td class="py-4 px-3 text-right font-mono matrix-cell"
-                        data-alloc={alloc} data-fdv={col.fdv} data-group={col.group}>
+                        data-alloc={alloc} data-fdv={fdvVal}>
                       —
                     </td>
                   ))}

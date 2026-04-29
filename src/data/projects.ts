@@ -20,6 +20,7 @@ export interface Project {
   referralBenefitEs: string;
   sliderMax: number;
   totalPointsPool?: number;  // total points in circulation (for matrix calculator)
+  fdvColumns?: number[];     // custom FDV values for matrix columns
   scenarios: Scenario[];
 }
 
@@ -33,6 +34,7 @@ export const projects: Project[] = [
     logoSrc: "/logos/pacifica.jpg",
     accentHex: "#06B6D4",   // cyan
     totalPointsPool: 400_000_000,
+    fdvColumns: [50_000_000, 100_000_000, 200_000_000, 400_000_000, 700_000_000, 1_000_000_000],
     referralLink: "https://app.pacifica.fi?referral=Lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -51,7 +53,8 @@ export const projects: Project[] = [
     logoEmoji: "📈",
     logoSrc: "/logos/extended.jpg",
     accentHex: "#10B981",   // emerald
-    totalPointsPool: 52_780_000, // confirmed: 40.18M distributed + 12.6M remaining
+    totalPointsPool: 52_780_000,
+    fdvColumns: [50_000_000, 100_000_000, 200_000_000, 400_000_000, 700_000_000, 1_000_000_000],
     referralLink: "https://app.extended.exchange/join/LYFHER",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -70,7 +73,8 @@ export const projects: Project[] = [
     logoEmoji: "⚡",
     logoSrc: "/logos/01.svg",
     accentHex: "#F59E0B",   // amber
-    totalPointsPool: 10_000_000, // confirmed: 01.xyz/points
+    totalPointsPool: 10_000_000,
+    fdvColumns: [50_000_000, 100_000_000, 150_000_000, 250_000_000, 350_000_000, 500_000_000],
     referralLink: "https://01.xyz/ref/Lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -89,7 +93,8 @@ export const projects: Project[] = [
     logoEmoji: "🍡",
     logoSrc: "/logos/dangologo.jpg",
     accentHex: "#DD3756",
-    totalPointsPool: 50_000_000, // confirmed: 38M campaign + 7.6M referral + 3.8M loot boxes
+    totalPointsPool: 50_000_000,
+    fdvColumns: [50_000_000, 100_000_000, 150_000_000, 250_000_000, 350_000_000, 500_000_000],
     referralLink: "https://dango.exchange?ref=6195",
     referralBenefit: "Sign up with my link and get a 30% fee rebate",
     referralBenefitEs: "Regístrate con mi link y obtén un 30% de rebate en fees",
@@ -108,7 +113,8 @@ export const projects: Project[] = [
     logoEmoji: "📐",
     logoSrc: "/logos/variational.jpg",
     accentHex: "#8B5CF6",
-    totalPointsPool: 8_400_000, // mid case: Aug TGE, 8.4M total points
+    totalPointsPool: 8_400_000,
+    fdvColumns: [50_000_000, 100_000_000, 200_000_000, 400_000_000, 700_000_000, 1_000_000_000],
     referralLink: "https://variational.io",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -127,7 +133,8 @@ export const projects: Project[] = [
     logoEmoji: "🔥",
     logoSrc: "/logos/hibachi.jpg",
     accentHex: "#EF4444",   // red
-    totalPointsPool: 55_000_000, // confirmed: 43M current + 12M remaining (6M weeks)
+    totalPointsPool: 55_000_000,
+    fdvColumns: [50_000_000, 100_000_000, 150_000_000, 250_000_000, 350_000_000, 500_000_000],
     referralLink: "https://hibachi.xyz/r/lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
