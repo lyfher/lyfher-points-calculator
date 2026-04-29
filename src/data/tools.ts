@@ -18,6 +18,7 @@ export const tools: Tool[] = [
     description: "Automate your perpetuals volume to farm more points efficiently. The best bot for perp farming.",
     descriptionEs: "Automatiza tu volumen en perpetuos para farmear más puntos eficientemente. El mejor bot para farming de perps.",
     logoEmoji: "🤖",
+    logoSrc: "/logos/treadfi logo.png",
     accentHex: "#3B82F6",
     referralLink: "https://app.tread.fi/referral/PODO5ZYR",
     referralBenefit: "20% discount on subscription",

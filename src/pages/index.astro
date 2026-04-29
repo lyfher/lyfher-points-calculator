@@ -94,7 +94,10 @@ import ProjectLogo from '../components/ProjectLogo.astro';
       >
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-3">
-            <span class="text-3xl">{tool.logoEmoji}</span>
+            {tool.logoSrc
+              ? <img src={tool.logoSrc} alt={tool.name} class="w-10 h-10 rounded-xl object-cover" />
+              : <span class="text-3xl">{tool.logoEmoji}</span>
+            }
             <h2 class="text-xl font-bold text-white group-hover:transition-colors" style={`--hover-color: ${tool.accentHex}`}>
               {tool.name}
             </h2>
