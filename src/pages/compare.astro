@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import { projects } from '../data/projects';
 import ProjectLogo from '../components/ProjectLogo.astro';
 
-const filteredProjects = projects.filter(p => p.slug !== 'treadfi');
+const filteredProjects = projects;
 const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label, labelEs: s.labelEs, emoji: s.emoji }));
 ---
 
