@@ -89,15 +89,15 @@ export const projects: Project[] = [
     logoEmoji: "🍡",
     logoSrc: "/logos/dangologo.jpg",
     accentHex: "#DD3756",
-    totalPointsPool: 50_000_000,
+    totalPointsPool: 50_000_000, // confirmed: 38M campaign + 7.6M referral + 3.8M loot boxes
     referralLink: "https://dango.exchange?ref=6195",
     referralBenefit: "Sign up with my link and get a 30% fee rebate",
     referralBenefitEs: "Regístrate con mi link y obtén un 30% de rebate en fees",
     sliderMax: 10,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0 },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 0 },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 0 },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.5, fdv: "$50M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 1, fdv: "$100M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 2, fdv: "$200M" },
     ],
   },
   {
