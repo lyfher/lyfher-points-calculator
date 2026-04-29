@@ -53,11 +53,11 @@ const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs
             id={`pts-${project.slug}`}
             placeholder="0"
             min="0"
-            max="1000000"
+            max="100000000"
             class="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-white font-bold placeholder-gray-700 focus:outline-none transition-colors text-sm"
             onfocus={`this.style.borderColor='${project.accentHex}80'`}
             onblur="this.style.borderColor=''"
-            oninput="updateCompare()"
+            oninput="this.value=this.value.slice(0,10); updateCompare()"
           />
         </div>
         <!-- $/pt reference -->
@@ -153,7 +153,9 @@ const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs
   function updateCompare() {
     const totals = [0, 0, 0];
     projectsData.forEach(project => {
-      const pts = Math.min(parseFloat(document.getElementById(`pts-${project.slug}`)?.value) || 0, 100_000_000);
+      const raw = parseFloat(document.getElementById(`pts-${project.slug}`)?.value) || 0;
+      const pts = Math.min(raw, 100_000_000);
+      if (raw > 100_000_000) { const el = document.getElementById(`pts-${project.slug}`); if(el) el.value = '100000000'; }
       project.scenarios.forEach((s, i) => {
         const val = pts * s.pricePerPoint;
         totals[i] += val;
