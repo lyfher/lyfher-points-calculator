@@ -10,6 +10,7 @@ export interface Tool {
   referralBenefitEs: string;
   tag: string;
   tagEs: string;
+  calculatorSlug?: string; // links to /{slug} calculator page
 }
 
 export const tools: Tool[] = [
@@ -25,5 +26,6 @@ export const tools: Tool[] = [
     referralBenefitEs: "20% de descuento en la suscripción",
     tag: "Volume Bot",
     tagEs: "Bot de Volumen",
+    calculatorSlug: "treadfi",
   },
 ];

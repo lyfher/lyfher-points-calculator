@@ -38,7 +38,7 @@ import ProjectLogo from '../components/ProjectLogo.astro';
 
   <!-- Project Cards -->
   <section class="grid gap-6 sm:grid-cols-2">
-    {projects.map((project) => (
+    {projects.filter(p => p.slug !== 'treadfi').map((project) => (
       <a
         href={`/${project.slug}`}
         class="group block bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-gray-600 hover:bg-gray-800 transition-all duration-200"
@@ -108,14 +108,24 @@ import ProjectLogo from '../components/ProjectLogo.astro';
             {tool.tag}
           </span>
         </div>
-        <p class="text-gray-400 text-sm leading-relaxed mb-4"
+        <p class="text-gray-400 text-sm leading-relaxed mb-3"
            data-en={tool.description} data-es={tool.descriptionEs}>
           {tool.description}
         </p>
-        <span class="text-sm font-medium" style={`color: ${tool.accentHex}`}
-              data-en={tool.referralBenefit} data-es={tool.referralBenefitEs}>
-          {tool.referralBenefit} →
-        </span>
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium" style={`color: ${tool.accentHex}`}
+                data-en={tool.referralBenefit} data-es={tool.referralBenefitEs}>
+            {tool.referralBenefit} →
+          </span>
+          {tool.calculatorSlug && (
+            <a href={`/${tool.calculatorSlug}`}
+               class="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+               onclick="event.stopPropagation()"
+               data-en="Calculate points →" data-es="Calcular puntos →">
+              Calculate points →
+            </a>
+          )}
+        </div>
       </a>
     ))}
   </section>

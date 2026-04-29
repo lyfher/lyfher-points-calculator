@@ -3,8 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import { projects } from '../data/projects';
 import ProjectLogo from '../components/ProjectLogo.astro';
 
-// All unique scenario labels (assume same across projects: Bear/Base/Bull)
-const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs: s.labelEs, emoji: s.emoji }));
+const filteredProjects = projects.filter(p => p.slug !== 'treadfi');
+const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label, labelEs: s.labelEs, emoji: s.emoji }));
 ---
 
 <Layout
@@ -27,7 +27,7 @@ const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs
 
   <!-- Points input per project -->
   <div class="grid gap-3 sm:grid-cols-2 mb-6">
-    {projects.map((project) => (
+    {filteredProjects.map((project) => (
       <div
         class="flex items-center gap-4 rounded-2xl p-4 border"
         style={`border-color: ${project.accentHex}30; background: ${project.accentHex}0e`}
@@ -99,7 +99,7 @@ const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-800">
-          {projects.map((project) => (
+          {filteredProjects.map((project) => (
             <tr class="group hover:bg-gray-800/50 transition-colors">
               <td class="px-5 py-4">
                 <div class="flex items-center gap-2">
@@ -143,7 +143,7 @@ const scenarioLabels = projects[0].scenarios.map(s => ({ label: s.label, labelEs
 
 </Layout>
 
-<script define:vars={{ projectsData: projects.map(p => ({ slug: p.slug, scenarios: p.scenarios })) }}>
+<script define:vars={{ projectsData: filteredProjects.map(p => ({ slug: p.slug, scenarios: p.scenarios })) }}>
   function fmt(n) {
     if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2) + 'M';
     if (n >= 1_000)     return '$' + (n / 1_000).toFixed(1) + 'K';
