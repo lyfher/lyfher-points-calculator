@@ -12,13 +12,14 @@ export interface Project {
   name: string;
   description: string;
   descriptionEs: string;
-  logoEmoji: string;  // fallback si no hay imagen
-  logoSrc?: string;   // ruta en /public, ej: /logos/pacifica.png
+  logoEmoji: string;
+  logoSrc?: string;
   accentHex: string;
   referralLink: string;
   referralBenefit: string;
   referralBenefitEs: string;
-  sliderMax: number;  // máximo razonable para el slider de precio/punto
+  sliderMax: number;
+  totalPointsPool?: number;  // total points in circulation (for matrix calculator)
   scenarios: Scenario[];
 }
 
@@ -31,6 +32,7 @@ export const projects: Project[] = [
     logoEmoji: "🌊",
     logoSrc: "/logos/pacifica.jpg",
     accentHex: "#06B6D4",   // cyan
+    totalPointsPool: 1_000_000,
     referralLink: "https://app.pacifica.fi?referral=Lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -49,6 +51,7 @@ export const projects: Project[] = [
     logoEmoji: "📈",
     logoSrc: "/logos/extended.jpg",
     accentHex: "#10B981",   // emerald
+    totalPointsPool: 5_000_000,
     referralLink: "https://app.extended.exchange/join/LYFHER",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -67,6 +70,7 @@ export const projects: Project[] = [
     logoEmoji: "⚡",
     logoSrc: "/logos/01.svg",
     accentHex: "#F59E0B",   // amber
+    totalPointsPool: 10_000_000,
     referralLink: "https://01.xyz/ref/Lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -85,6 +89,7 @@ export const projects: Project[] = [
     logoEmoji: "🍡",
     logoSrc: "/logos/dangologo.jpg",
     accentHex: "#DD3756",
+    totalPointsPool: 50_000_000,
     referralLink: "https://dango.exchange?ref=6195",
     referralBenefit: "Sign up with my link and get a 30% fee rebate",
     referralBenefitEs: "Regístrate con mi link y obtén un 30% de rebate en fees",
@@ -103,6 +108,7 @@ export const projects: Project[] = [
     logoEmoji: "📐",
     logoSrc: "/logos/variational.jpg",
     accentHex: "#8B5CF6",
+    totalPointsPool: 500_000,
     referralLink: "https://variational.io",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
@@ -121,6 +127,7 @@ export const projects: Project[] = [
     logoEmoji: "🔥",
     logoSrc: "/logos/hibachi.jpg",
     accentHex: "#EF4444",   // red
+    totalPointsPool: 2_000_000,
     referralLink: "https://hibachi.xyz/r/lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
