@@ -32,7 +32,7 @@ export const projects: Project[] = [
     logoEmoji: "🌊",
     logoSrc: "/logos/pacifica.jpg",
     accentHex: "#06B6D4",   // cyan
-    totalPointsPool: 1_000_000,
+    totalPointsPool: 400_000_000,
     referralLink: "https://app.pacifica.fi?referral=Lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",

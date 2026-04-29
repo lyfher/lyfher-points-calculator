@@ -39,27 +39,36 @@ const accent = project.accentHex;
 
   <!-- Points input row -->
   <div class="flex flex-wrap gap-3 mb-4 items-end">
-    <div class="flex-1 min-w-60">
-      <label class="block text-xs text-gray-500 mb-1 uppercase tracking-wider" for="my-points">
-        <span data-en="Your total points" data-es="Tus puntos totales">Your total points</span>
-        {project.totalPointsPool && (
-          <span class="ml-2 font-mono" style={`color: ${accent}`}>
-            / {project.totalPointsPool.toLocaleString('en-US')} total
-          </span>
-        )}
-      </label>
-      <div class="flex gap-2">
-        <input
-          type="number" id="my-points" placeholder="0" min="0" max="1000000"
-          class="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-xl font-bold placeholder-gray-700 focus:outline-none transition-colors"
-          onfocus={`this.style.borderColor='${accent}80'`}
-          onblur="this.style.borderColor=''"
-        />
-        <div class="rounded-xl px-4 py-3 text-center border min-w-28" style={`border-color: ${accent}40; background: ${accent}12`}>
-          <p class="text-xs mb-0.5" style={`color: ${accent}99`} data-en="Your share" data-es="Tu share">Your share</p>
-          <p id="share-pct" class="text-sm font-bold font-mono" style={`color: ${accent}`}>0.0000%</p>
-        </div>
-      </div>
+    <!-- My points -->
+    <div class="flex-1 min-w-48">
+      <label class="block text-xs text-gray-500 mb-1 uppercase tracking-wider" for="my-points"
+             data-en="Your points" data-es="Tus puntos">Your points</label>
+      <input
+        type="number" id="my-points" placeholder="0" min="0" max="1000000000"
+        class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-xl font-bold placeholder-gray-700 focus:outline-none transition-colors"
+        onfocus={`this.style.borderColor='${accent}80'`}
+        onblur="this.style.borderColor=''"
+      />
+    </div>
+
+    <!-- Total pool (editable) -->
+    <div class="flex-1 min-w-48">
+      <label class="block text-xs text-gray-500 mb-1 uppercase tracking-wider" for="total-pool"
+             data-en="Total points pool (estimated)" data-es="Pool total de puntos (estimado)">Total points pool (estimated)</label>
+      <input
+        type="number" id="total-pool" min="1"
+        placeholder={String(project.totalPointsPool ?? 10000000)}
+        value={String(project.totalPointsPool ?? '')}
+        class="w-full bg-gray-900 border border-dashed border-gray-700 rounded-xl px-4 py-3 text-white text-xl font-bold placeholder-gray-600 focus:outline-none transition-colors"
+        onfocus={`this.style.borderColor='${accent}80'`}
+        onblur="this.style.borderColor=''"
+      />
+    </div>
+
+    <!-- Share % -->
+    <div class="rounded-xl px-4 py-3 text-center border min-w-28" style={`border-color: ${accent}40; background: ${accent}12`}>
+      <p class="text-xs mb-0.5" style={`color: ${accent}99`} data-en="Your share" data-es="Tu share">Your share</p>
+      <p id="share-pct" class="text-sm font-bold font-mono" style={`color: ${accent}`}>0.0000%</p>
     </div>
   </div>
 
@@ -145,25 +154,25 @@ const accent = project.accentHex;
 
 </Layout>
 
-<script define:vars={{ totalPointsPool: project.totalPointsPool ?? null }}>
+<script define:vars={{ defaultPool: project.totalPointsPool ?? 10000000 }}>
   function fmtMoney(n) {
     if (n >= 10000) return '$' + (n / 1000).toFixed(2) + 'K';
     return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function cellColor(val) {
-    if (val >= 10000) return '#4ade80';   // green
-    if (val >= 1000)  return '#facc15';   // yellow
-    return '#6b7280';                      // gray
+    if (val >= 10000) return '#4ade80';
+    if (val >= 1000)  return '#facc15';
+    return '#6b7280';
   }
 
   function update() {
-    const pts = parseFloat(document.getElementById('my-points')?.value) || 0;
-    const pool = totalPointsPool;
+    const pts  = parseFloat(document.getElementById('my-points')?.value) || 0;
+    const pool = parseFloat(document.getElementById('total-pool')?.value) || defaultPool;
 
     // Share %
     const shareEl = document.getElementById('share-pct');
-    if (shareEl && pool) {
+    if (shareEl) {
       const pct = pool > 0 ? (pts / pool) * 100 : 0;
       shareEl.textContent = pct.toFixed(4) + '%';
     }
@@ -172,9 +181,10 @@ const accent = project.accentHex;
     document.querySelectorAll('.matrix-cell').forEach(cell => {
       const alloc = parseFloat(cell.dataset.alloc) / 100;
       const fdv   = parseFloat(cell.dataset.fdv);
-      if (!pool || pts === 0) {
+      if (pts === 0) {
         cell.textContent = '—';
         cell.style.color = '#4b5563';
+        cell.style.fontWeight = '400';
         return;
       }
       const val = (pts / pool) * alloc * fdv;
@@ -184,9 +194,6 @@ const accent = project.accentHex;
     });
   }
 
-  const ptsInput = document.getElementById('my-points');
-  ptsInput?.addEventListener('input', () => {
-    if (parseFloat(ptsInput.value) > 1000000) ptsInput.value = '1000000';
-    update();
-  });
+  document.getElementById('my-points')?.addEventListener('input', update);
+  document.getElementById('total-pool')?.addEventListener('input', update);
 </script>
