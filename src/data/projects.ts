@@ -51,15 +51,15 @@ export const projects: Project[] = [
     logoEmoji: "📈",
     logoSrc: "/logos/extended.jpg",
     accentHex: "#10B981",   // emerald
-    totalPointsPool: 5_000_000,
+    totalPointsPool: 52_780_000, // confirmed: 40.18M distributed + 12.6M remaining
     referralLink: "https://app.extended.exchange/join/LYFHER",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 10,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 1, fdv: "$100M" },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 2, fdv: "$200M" },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 3, fdv: "$400M" },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 1.4, fdv: "$250M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 2.8, fdv: "$500M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 5.7, fdv: "$1B" },
     ],
   },
   {
@@ -70,7 +70,7 @@ export const projects: Project[] = [
     logoEmoji: "⚡",
     logoSrc: "/logos/01.svg",
     accentHex: "#F59E0B",   // amber
-    totalPointsPool: 10_000_000,
+    totalPointsPool: 10_000_000, // confirmed: 01.xyz/points
     referralLink: "https://01.xyz/ref/Lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
