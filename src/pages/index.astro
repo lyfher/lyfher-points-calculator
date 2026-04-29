@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { projects } from '../data/projects';
+import { tools } from '../data/tools';
 import ProjectLogo from '../components/ProjectLogo.astro';
 ---
 
@@ -27,6 +28,12 @@ import ProjectLogo from '../components/ProjectLogo.astro';
       ⚖️ <span data-en="Compare all projects" data-es="Comparar todos los proyectos">Compare all projects</span>
       <span class="text-gray-500">→</span>
     </a>
+  </div>
+
+  <!-- Section label: Perpetuals -->
+  <div class="flex items-center gap-3 mb-4">
+    <span class="text-xs font-semibold uppercase tracking-widest text-gray-500" data-en="Perpetuals" data-es="Perpetuos">Perpetuals</span>
+    <div class="flex-1 h-px bg-gray-800"></div>
   </div>
 
   <!-- Project Cards -->
@@ -69,6 +76,45 @@ import ProjectLogo from '../components/ProjectLogo.astro';
         🔜 More projects coming soon
       </p>
     </div>
+  </section>
+
+  <!-- Section label: Tools & Bots -->
+  <div class="flex items-center gap-3 mt-10 mb-4">
+    <span class="text-xs font-semibold uppercase tracking-widest text-gray-500" data-en="Tools & Bots" data-es="Herramientas y Bots">Tools & Bots</span>
+    <div class="flex-1 h-px bg-gray-800"></div>
+  </div>
+
+  <section class="grid gap-6 sm:grid-cols-2">
+    {tools.map((tool) => (
+      <a
+        href={tool.referralLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="group block bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-gray-600 hover:bg-gray-800 transition-all duration-200"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">{tool.logoEmoji}</span>
+            <h2 class="text-xl font-bold text-white group-hover:transition-colors" style={`--hover-color: ${tool.accentHex}`}>
+              {tool.name}
+            </h2>
+          </div>
+          <span class="text-xs font-semibold px-2 py-1 rounded-lg border"
+                style={`color: ${tool.accentHex}; border-color: ${tool.accentHex}40; background: ${tool.accentHex}12`}
+                data-en={tool.tag} data-es={tool.tagEs}>
+            {tool.tag}
+          </span>
+        </div>
+        <p class="text-gray-400 text-sm leading-relaxed mb-4"
+           data-en={tool.description} data-es={tool.descriptionEs}>
+          {tool.description}
+        </p>
+        <span class="text-sm font-medium" style={`color: ${tool.accentHex}`}
+              data-en={tool.referralBenefit} data-es={tool.referralBenefitEs}>
+          {tool.referralBenefit} →
+        </span>
+      </a>
+    ))}
   </section>
 
   <!-- About -->
