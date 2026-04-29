@@ -153,7 +153,7 @@ export const projects: Project[] = [
     logoEmoji: "🤖",
     accentHex: "#3B82F6",
     totalPointsPool: 2_900_000,
-    fdvColumns: [10_000_000, 25_000_000, 50_000_000, 75_000_000, 100_000_000, 150_000_000],
+    fdvColumns: [20_000_000, 50_000_000, 75_000_000, 100_000_000, 200_000_000, 300_000_000],
     referralLink: "https://app.tread.fi/referral/PODO5ZYR",
     referralBenefit: "Sign up with my link for a 20% discount",
     referralBenefitEs: "Regístrate con mi link y obtén 20% de descuento",
