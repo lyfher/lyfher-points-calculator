@@ -79,22 +79,32 @@ const accent = project.accentHex;
     <div class="lg:col-span-3 bg-gray-900 rounded-2xl overflow-hidden border border-gray-800">
       <div class="h-1 w-full" style={`background: linear-gradient(90deg, ${accent}, ${accent}44)`}></div>
       <div class="p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider"
-              data-en="Airdrop Calculator" data-es="Calculadora de Airdrop">Airdrop Calculator</h2>
-          <div class="flex items-center gap-3 text-xs text-gray-600">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> &gt;$10K</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> &gt;$1K</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-600 inline-block"></span> &lt;$1K</span>
-          </div>
-        </div>
+        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4"
+            data-en="Airdrop Calculator" data-es="Calculadora de Airdrop">Airdrop Calculator</h2>
         <div>
           <table class="w-full text-xs" id="fdv-matrix">
             <thead>
-              <tr class="text-gray-600 uppercase border-b border-gray-800">
-                <th class="text-left pb-2 pr-2 font-semibold" data-en="Allocation %" data-es="Asignación %">Alloc %</th>
-                {['$50M','$100M','$250M','$500M','$1B','$2B'].map(fdv => (
-                  <th class="text-right pb-2 px-1 font-semibold whitespace-nowrap">{fdv}</th>
+              <!-- Scenario group labels -->
+              <tr class="text-xs font-bold uppercase">
+                <th></th>
+                <th colspan="2" class="text-center pb-1 text-red-400">🐻 Bear</th>
+                <th colspan="2" class="text-center pb-1 text-yellow-400">📊 Normal</th>
+                <th colspan="2" class="text-center pb-1 text-green-400">🚀 Bull</th>
+              </tr>
+              <!-- FDV values -->
+              <tr class="uppercase border-b border-gray-800">
+                <th class="text-left pb-2 pr-2 font-semibold text-gray-600" data-en="Alloc %" data-es="Asig %">Alloc %</th>
+                {[
+                  {label:'$50M', group:'bear'},
+                  {label:'$100M', group:'bear'},
+                  {label:'$250M', group:'normal'},
+                  {label:'$500M', group:'normal'},
+                  {label:'$1B',   group:'bull'},
+                  {label:'$2B',   group:'bull'},
+                ].map(col => (
+                  <th class={`text-right pb-2 px-1 font-semibold whitespace-nowrap ${col.group==='bear'?'text-red-400/60':col.group==='normal'?'text-yellow-400/60':'text-green-400/60'}`}>
+                    {col.label}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -102,9 +112,16 @@ const accent = project.accentHex;
               {[10, 15, 20, 25, 30].map(alloc => (
                 <tr>
                   <td class="py-3 pr-2 font-bold" style={`color: ${accent}`}>{alloc}%</td>
-                  {[50_000_000, 100_000_000, 250_000_000, 500_000_000, 1_000_000_000, 2_000_000_000].map(fdvVal => (
+                  {[
+                    {fdv: 50_000_000,    group:'bear'},
+                    {fdv: 100_000_000,   group:'bear'},
+                    {fdv: 250_000_000,   group:'normal'},
+                    {fdv: 500_000_000,   group:'normal'},
+                    {fdv: 1_000_000_000, group:'bull'},
+                    {fdv: 2_000_000_000, group:'bull'},
+                  ].map(col => (
                     <td class="py-3 px-1 text-right font-mono matrix-cell"
-                        data-alloc={alloc} data-fdv={fdvVal}>
+                        data-alloc={alloc} data-fdv={col.fdv} data-group={col.group}>
                       —
                     </td>
                   ))}
@@ -160,10 +177,10 @@ const accent = project.accentHex;
     return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function cellColor(val) {
-    if (val >= 10000) return '#4ade80';
-    if (val >= 1000)  return '#facc15';
-    return '#6b7280';
+  function cellColor(group) {
+    if (group === 'bear')   return '#f87171';  // red-400
+    if (group === 'normal') return '#facc15';  // yellow-400
+    return '#4ade80';                           // green-400 (bull)
   }
 
   function update() {
@@ -181,6 +198,7 @@ const accent = project.accentHex;
     document.querySelectorAll('.matrix-cell').forEach(cell => {
       const alloc = parseFloat(cell.dataset.alloc) / 100;
       const fdv   = parseFloat(cell.dataset.fdv);
+      const group = cell.dataset.group;
       if (pts === 0) {
         cell.textContent = '—';
         cell.style.color = '#4b5563';
@@ -189,8 +207,8 @@ const accent = project.accentHex;
       }
       const val = (pts / pool) * alloc * fdv;
       cell.textContent = fmtMoney(val);
-      cell.style.color = cellColor(val);
-      cell.style.fontWeight = val >= 1000 ? '700' : '400';
+      cell.style.color = cellColor(group);
+      cell.style.fontWeight = '600';
     });
   }
 
