@@ -108,15 +108,15 @@ export const projects: Project[] = [
     logoEmoji: "📐",
     logoSrc: "/logos/variational.jpg",
     accentHex: "#8B5CF6",
-    totalPointsPool: 500_000,
+    totalPointsPool: 8_400_000, // mid case: Aug TGE, 8.4M total points
     referralLink: "https://variational.io",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 50,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 10, fdv: "$200M" },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 15, fdv: "$400M" },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 20, fdv: "$800M" },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 10, fdv: "$100M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 13, fdv: "$300M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 16, fdv: "$500M" },
     ],
   },
   {
@@ -127,15 +127,15 @@ export const projects: Project[] = [
     logoEmoji: "🔥",
     logoSrc: "/logos/hibachi.jpg",
     accentHex: "#EF4444",   // red
-    totalPointsPool: 2_000_000,
+    totalPointsPool: 55_000_000, // confirmed: 43M current + 12M remaining (6M weeks)
     referralLink: "https://hibachi.xyz/r/lyfher",
     referralBenefit: "Sign up with my link for exclusive bonuses",
     referralBenefitEs: "Únete con mi link para bonificaciones exclusivas",
     sliderMax: 10,
     scenarios: [
-      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.5, fdv: "$50M" },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 1, fdv: "$100M" },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 1.5, fdv: "$200M" },
+      { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 0.27, fdv: "$100M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 0.55, fdv: "$100M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 1.36, fdv: "$500M" },
     ],
   },
 ];
