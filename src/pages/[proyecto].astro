@@ -163,10 +163,21 @@ const accent = project.accentHex;
 
   function cellColor(val, minVal, maxVal) {
     if (maxVal === minVal) return '#facc15';
-    const t = (val - minVal) / (maxVal - minVal); // 0 = bear, 1 = bull
-    if (t < 0.33) return '#f87171';  // red
-    if (t < 0.66) return '#facc15';  // yellow
-    return '#4ade80';                 // green
+    const t = (val - minVal) / (maxVal - minVal); // 0.0 = min, 1.0 = max
+    // Smooth interpolation: red → yellow → green
+    let r, g, b;
+    if (t < 0.5) {
+      const s = t / 0.5;
+      r = Math.round(248 + (250 - 248) * s);
+      g = Math.round(113 + (204 - 113) * s);
+      b = Math.round(113 + (21  - 113) * s);
+    } else {
+      const s = (t - 0.5) / 0.5;
+      r = Math.round(250 + (74  - 250) * s);
+      g = Math.round(204 + (222 - 204) * s);
+      b = Math.round(21  + (128 - 21)  * s);
+    }
+    return `rgb(${r},${g},${b})`;
   }
 
   function update() {
