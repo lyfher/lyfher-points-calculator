@@ -121,8 +121,8 @@ export const projects: Project[] = [
     sliderMax: 50,
     scenarios: [
       { label: "Bear", labelEs: "Bajista", emoji: "🐻", pricePerPoint: 10, fdv: "$100M" },
-      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 13, fdv: "$300M" },
-      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 16, fdv: "$500M" },
+      { label: "Base", labelEs: "Normal", emoji: "📊", pricePerPoint: 15, fdv: "$300M" },
+      { label: "Bull", labelEs: "Optimista", emoji: "🚀", pricePerPoint: 20, fdv: "$500M" },
     ],
   },
   {
