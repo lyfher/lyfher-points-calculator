@@ -19,7 +19,7 @@ export const tools: Tool[] = [
     descriptionEs: "Automatiza tu volumen en perpetuos para farmear más puntos eficientemente. El mejor bot para farming de perps.",
     logoEmoji: "🤖",
     accentHex: "#3B82F6",
-    referralLink: "https://tread.fi?ref=POD05ZYR",
+    referralLink: "https://app.tread.fi/referral/PODO5ZYR",
     referralBenefit: "20% discount on subscription",
     referralBenefitEs: "20% de descuento en la suscripción",
     tag: "Volume Bot",
