@@ -150,7 +150,7 @@ const fdvLabels = fdvColumns.map(v => v >= 1_000_000_000 ? `$${v/1_000_000_000}B
 
 </Layout>
 
-<script define:vars={{ defaultPool: project.totalPointsPool ?? 10000000 }}>
+<script define:vars={{ defaultPool: project.totalPointsPool ?? 10000000, projectSlug: project.slug }}>
   function fmtMoney(n) {
     if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2) + 'M';
     if (n >= 1_000)     return '$' + (n / 1_000).toFixed(1) + 'K';
@@ -213,11 +213,27 @@ const fdvLabels = fdvColumns.map(v => v >= 1_000_000_000 ? `$${v/1_000_000_000}B
     });
   }
 
-  const ptsInput = document.getElementById('my-points');
+  const STORAGE_KEY = `lyfher_pts_${projectSlug}`;
+  const POOL_KEY    = `lyfher_pool_${projectSlug}`;
+
+  const ptsInput  = document.getElementById('my-points');
+  const poolInput = document.getElementById('total-pool');
+
+  // Load saved values
+  const savedPts  = localStorage.getItem(STORAGE_KEY);
+  const savedPool = localStorage.getItem(POOL_KEY);
+  if (savedPts  && ptsInput)  { ptsInput.value  = savedPts;  }
+  if (savedPool && poolInput) { poolInput.value  = savedPool; }
+  update();
+
   ptsInput?.addEventListener('input', () => {
     if (parseFloat(ptsInput.value) > 100_000_000) ptsInput.value = '100000000';
+    localStorage.setItem(STORAGE_KEY, ptsInput.value);
     update();
   });
-  document.getElementById('total-pool')?.addEventListener('input', update);
 
+  poolInput?.addEventListener('input', () => {
+    localStorage.setItem(POOL_KEY, poolInput.value);
+    update();
+  });
 </script>
