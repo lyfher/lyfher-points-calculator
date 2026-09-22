@@ -369,6 +369,7 @@ function renderTop(list){
   const box=$('top-pick');
   if(!list.length){ box.classList.add('hidden'); box.innerHTML=''; return; }
   const r=list.slice().sort((a,b)=>scoreRow(b)-scoreRow(a))[0];
+  window._topRow=r;
   const sp=r.spread;
   const spTxt=sp==null?'—':(sp>=0?'+':'')+sp.toFixed(3)+'%';
   const spCls=sp==null?'text-gray-500':sp<=0.05?'text-green-400':'text-yellow-400';
@@ -379,7 +380,7 @@ function renderTop(list){
       : T('Best funding after entry cost & depth.','Mejor funding tras costo de entrada y profundidad.'));
   const btns=[openBtn(r.long),openBtn(r.short)].filter(Boolean).join(' ');
   box.innerHTML=`
-    <div class="rounded-2xl p-4 border border-green-500/40 bg-green-500/5" style="box-shadow:0 0 24px rgba(34,197,94,0.10)">
+    <div id="top-card" class="rounded-2xl p-4 border border-green-500/40 bg-green-500/5 cursor-help" style="box-shadow:0 0 24px rgba(34,197,94,0.10)">
       <div class="flex items-center flex-wrap gap-x-4 gap-y-2">
         <span class="text-xs font-bold uppercase tracking-widest text-green-400">🔥 ${T('Top pick','Top del momento')}</span>
         <span class="text-lg font-bold text-white">${r.coin}</span>
@@ -392,6 +393,10 @@ function renderTop(list){
       <div class="text-xs text-gray-500 mt-2">${why}</div>
     </div>`;
   box.classList.remove('hidden');
+  const tip=$('tip'), card=$('top-card');
+  card.addEventListener('mouseenter',()=>{ tip.innerHTML=tipHtml(window._topRow); tip.classList.remove('hidden'); });
+  card.addEventListener('mousemove',e=>{ tip.style.left=Math.min(e.clientX+14,window.innerWidth-260)+'px'; tip.style.top=(e.clientY+14)+'px'; });
+  card.addEventListener('mouseleave',()=>tip.classList.add('hidden'));
 }
 
 function renderTable(){
@@ -442,6 +447,29 @@ function legLine(l, role){
   </div>`;
 }
 
+function tradeMath(r){
+  const cap=capital(); if(!cap) return '';
+  const yr=r.netAPR/100*cap, daily=yr/365, sp=r.spread;
+  let entryLine, beLine='';
+  if(sp==null){ entryLine=T('Entry spread: no price feed.','Spread de entrada: sin precio.'); }
+  else {
+    const entry=sp/100*cap;  // + = cost, − = credit
+    if(sp<0){
+      entryLine=`<span class="text-green-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = +${fmtMoney(-entry)} ${T('credit','de crédito')}</span>`;
+      beLine=T('You start ahead — funding is profit from day 1.','Empiezas ganando — el funding es ganancia desde el día 1.');
+    } else {
+      entryLine=`<span class="text-yellow-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = −${fmtMoney(entry)} ${T('cost','de costo')}</span>`;
+      const days=daily>0?entry/daily:Infinity;
+      beLine=isFinite(days)?T(`Break-even in ~${days.toFixed(1)} days of funding.`,`Recuperas en ~${days.toFixed(1)} días de funding.`):T('Funding too low to recover the entry.','Funding muy bajo para recuperar la entrada.');
+    }
+  }
+  return `<div class="mt-2 pt-2 border-t border-gray-800">
+    <div class="text-gray-500 mb-1">${T('Trade math on','Cálculo sobre')} ${fmtMoney(cap)} ${T('per leg','por pata')}</div>
+    <div>${entryLine}</div>
+    <div class="text-emerald-400">${T('Funding','Funding')}: +${fmtMoney(yr)}/yr · +${fmtMoney(daily)}/${T('day','día')}</div>
+    ${beLine?`<div class="text-gray-400">${beLine}</div>`:''}
+  </div>`;
+}
 function buildDetail(r){
   const depthWarn=r.depth!=null&&r.depth<1e6;
   return `<div class="text-xs">
@@ -450,6 +478,7 @@ function buildDetail(r){
     ${(() => { const btn=(l)=>{ const m=EX[l.ex]||{}; return m.ref?`<a href="${m.ref}" target="_blank" rel="noopener noreferrer" class="inline-block px-2.5 py-1 rounded border font-semibold" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${T('Open','Abrir')} ${m.short} ↗</a>`:''; };
       const b=[btn(r.long),btn(r.short)].filter(Boolean).join(' '); return b?`<div class="mt-2 flex gap-2">${b}</div>`:''; })()}
     ${(depthWarn?`<div class="mt-2 text-red-400">⚠ ${T('Thin market ('+fmtMoney(r.depth)+' OI) — hard to size in, slippage is high.','Mercado fino ('+fmtMoney(r.depth)+' OI) — difícil entrar, slippage alto.')}</div>`:'')}
+    ${tradeMath(r)}
   </div>`;
 }
 
