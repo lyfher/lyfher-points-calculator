@@ -32,7 +32,7 @@ import Layout from '../layouts/Layout.astro';
     <div class="text-xs text-gray-500 mt-0.5" data-en="Exchanges live" data-es="Exchanges activos">Exchanges live</div>
   </div>
   <div id="autorefresh-toggle" class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center cursor-pointer select-none">
-    <div id="stat-refresh" class="text-2xl font-bold text-yellow-400">60s</div>
+    <div id="stat-refresh" class="text-2xl font-bold text-yellow-400">10s</div>
     <div class="text-xs text-gray-500 mt-0.5" data-en="Auto-refresh" data-es="Auto-actualizar">Auto-refresh</div>
   </div>
 </div>
@@ -41,6 +41,10 @@ import Layout from '../layouts/Layout.astro';
 <div class="flex items-center gap-2 mb-3">
   <span class="text-lg">🔬</span>
   <h2 class="text-lg font-bold text-white" data-en="Live Scanner" data-es="Scanner en Vivo">Live Scanner</h2>
+  <div class="ml-auto flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-0.5">
+    <button id="view-table" class="view-btn text-xs font-medium px-3 py-1 rounded-md bg-gray-700 text-white" data-view="table" data-en="Table" data-es="Tabla">Table</button>
+    <button id="view-heat" class="view-btn text-xs font-medium px-3 py-1 rounded-md text-gray-500 hover:text-white" data-view="heat" data-en="Heatmap" data-es="Mapa">Heatmap</button>
+  </div>
 </div>
 
 <!-- Controls -->
@@ -76,6 +80,9 @@ import Layout from '../layouts/Layout.astro';
       <option value="50">50%</option>
       <option value="100">100%</option>
     </select>
+    <label class="text-xs text-gray-500" data-en="Capital $" data-es="Capital $">Capital $</label>
+    <input id="capital" type="number" min="0" step="1000" value="10000"
+           class="w-24 bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500"/>
   </div>
 </div>
 
@@ -96,7 +103,7 @@ import Layout from '../layouts/Layout.astro';
 </div>
 
 <!-- Table -->
-<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-6">
+<div id="table-wrap" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-6">
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
@@ -105,6 +112,9 @@ import Layout from '../layouts/Layout.astro';
           <th class="text-center px-3 py-3" data-en="Best Pair (Long / Short)" data-es="Mejor Par (Long / Short)">Best Pair (Long / Short)</th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="net">
             <span data-en="Net APR" data-es="APR Neto">Net APR</span> <span class="sort-arrow" data-key="net"></span>
+          </th>
+          <th class="text-right px-3 py-3" title="Estimated yearly profit on your capital (per leg notional)">
+            <span data-en="Est. $/yr" data-es="Est. $/año">Est. $/yr</span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span> <span class="sort-arrow" data-key="spread"></span>
@@ -115,9 +125,20 @@ import Layout from '../layouts/Layout.astro';
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="5" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
+        <tr><td colspan="6" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Heatmap -->
+<div id="heat-wrap" class="hidden bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-6">
+  <div class="overflow-x-auto"><div id="heat-body" class="p-3 min-w-max"></div></div>
+  <div class="px-4 py-2 border-t border-gray-800 flex items-center gap-3 text-xs text-gray-500">
+    <span data-en="Funding APR:" data-es="APR funding:">Funding APR:</span>
+    <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background:#22c55e"></span> <span data-en="pays longs" data-es="paga a longs">pays longs</span></span>
+    <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background:#ef4444"></span> <span data-en="pays shorts" data-es="paga a shorts">pays shorts</span></span>
+    <span class="text-gray-600" data-en="Long green · short red for the same coin = spread to farm." data-es="Long verde · short rojo del mismo coin = spread a farmear.">Long green · short red = spread to farm.</span>
   </div>
 </div>
 
@@ -174,8 +195,8 @@ import Layout from '../layouts/Layout.astro';
 </Layout>
 
 <script is:inline>
-const REFRESH_MS = 60000;
-let rows = [], timer = null, autoOn = true, cd = 60;
+const REFRESH_SEC = 10;
+let rows = [], timer = null, autoOn = true, cd = REFRESH_SEC, view = 'table';
 let sortKey = 'net', sortDir = -1;
 let enabledEx = null;   // Set of enabled exchange keys (null = all until built)
 const $ = id => document.getElementById(id);
@@ -214,6 +235,7 @@ function fmtMoney(n){
 function normCoin(sym){
   return sym.replace(/[-_/].*$/,'').replace(/USDT$|USDC$|USD$|PERP$/i,'').toUpperCase();
 }
+function capital(){ const v=parseFloat($('capital').value); return isNaN(v)||v<0?0:v; }
 
 
 // ─── Sources (client, CORS-open) ────────────────────────────────────────
@@ -320,9 +342,18 @@ function passFilters(r){
   return true;
 }
 
-function renderTable(){
+function getFiltered(){
   const q=$('search').value.trim().toUpperCase();
-  let show=rows.map(deriveRow).filter(Boolean).filter(r=>(!q||r.coin.includes(q)) && passFilters(r));
+  return rows.map(deriveRow).filter(Boolean).filter(r=>(!q||r.coin.includes(q)) && passFilters(r));
+}
+function updateStats(show){
+  $('stat-ops').textContent=show.length||'0';
+  $('stat-best').textContent=show.length?('+'+Math.max(...show.map(r=>r.netAPR)).toFixed(1)+'%'):'—';
+}
+function render(){ view==='heat'?renderHeat():renderTable(); }
+
+function renderTable(){
+  let show=getFiltered();
   show.sort((a,b)=>{ let av,bv;
     if(sortKey==='net'){av=a.netAPR;bv=b.netAPR;}
     else if(sortKey==='spread'){av=Math.abs(a.spread??999);bv=Math.abs(b.spread??999);}
@@ -330,11 +361,10 @@ function renderTable(){
     else{av=a.sources;bv=b.sources;}
     return (av-bv)*sortDir; });
 
-  $('stat-ops').textContent=show.length||'0';
-  $('stat-best').textContent=show.length?('+'+Math.max(...show.map(r=>r.netAPR)).toFixed(1)+'%'):'—';
+  updateStats(show);
 
   if(!show.length){
-    $('table-body').innerHTML=`<tr><td colspan="5" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
+    $('table-body').innerHTML=`<tr><td colspan="6" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
     return;
   }
 
@@ -342,6 +372,7 @@ function renderTable(){
   $('table-body').innerHTML=show.map((r,i)=>{
     const spreadTxt=r.spread!=null?(r.spread>=0?'+':'')+r.spread.toFixed(3)+'%':'—';
     const spreadCls=r.spread==null?'text-gray-600':Math.abs(r.spread)<0.05?'text-green-400':Math.abs(r.spread)<0.2?'text-yellow-500':'text-red-400';
+    const profit=r.netAPR/100*capital();
     return `
     <tr class="row border-b border-gray-800/60 hover:bg-gray-800/40 transition-colors cursor-pointer" data-i="${i}">
       <td class="px-4 py-3 font-bold text-white">${r.coin}</td>
@@ -349,10 +380,11 @@ function renderTable(){
         <div class="flex items-center justify-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</div>
       </td>
       <td class="px-3 py-3 text-right font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%</td>
+      <td class="px-3 py-3 text-right font-mono text-emerald-400">${fmtMoney(profit)}</td>
       <td class="px-3 py-3 text-right font-mono ${spreadCls}">${spreadTxt}</td>
       <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-400'}">${fmtMoney(r.depth)}</td>
     </tr>
-    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="5" class="px-4 py-3"></td></tr>`;
+    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="6" class="px-4 py-3"></td></tr>`;
   }).join('');
 
   bindRows();
@@ -388,8 +420,11 @@ function tipHtml(r){
   if(sp==null) spLine=T('Entry: no price feed to check.','Entrada: sin precio para verificar.');
   else if(Math.abs(sp)<=0.05) spLine=T('Cheap entry — start flat, farm the funding.','Entrada barata — empiezas a la par y farmeas.');
   else spLine=T(`Entry costs ${sp.toFixed(2)}% — recovered by funding if it holds.`,`Entrada cuesta ${sp.toFixed(2)}% — se recupera con el funding si se mantiene.`);
+  const cap=capital(), yr=r.netAPR/100*cap, dy=yr/365;
+  const profitLine=cap>0?`<div class="text-emerald-400 mb-0.5">${fmtMoney(yr)}/yr · ${fmtMoney(dy)}/day ${T('on','sobre')} ${fmtMoney(cap)}</div>`:'';
   return `<div class="font-semibold text-white mb-1">${T('LONG','LARGO')} <span class="text-green-400">${l}</span> · ${T('SHORT','CORTO')} <span class="text-red-400">${s}</span></div>
     <div class="text-green-400 mb-0.5">+${r.netAPR.toFixed(1)}% APR</div>
+    ${profitLine}
     <div class="text-gray-400">${spLine}</div>`;
 }
 
@@ -410,6 +445,44 @@ function bindRows(){
 
 function updateSortArrows(){ document.querySelectorAll('.sort-arrow').forEach(el=>{ el.textContent=el.dataset.key===sortKey?(sortDir<0?'▼':'▲'):''; }); }
 
+// ─── Heatmap ────────────────────────────────────────────────────────────
+function heatColor(a){
+  if(a==null) return 'background:#0b0f1a;color:#374151';
+  const cap=Math.min(Math.abs(a),40)/40;          // saturate at ±40% APR
+  const alpha=(0.15+cap*0.6).toFixed(2);
+  const rgb=a<0?'34,197,94':'239,68,68';          // neg=green(long), pos=red(short)
+  return `background:rgba(${rgb},${alpha});color:${cap>0.45?'#fff':'#cbd5e1'}`;
+}
+function renderHeat(){
+  const exs=Object.keys(EX).filter(k=>enabledEx.has(k));
+  let show=getFiltered().sort((a,b)=>b.netAPR-a.netAPR).slice(0,40);
+  updateStats(getFiltered());
+  if(!show.length||!exs.length){ $('heat-body').innerHTML=`<div class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</div>`; return; }
+  const cols=`grid-template-columns:72px repeat(${exs.length},minmax(58px,1fr))`;
+  const head=`<div class="text-xs text-gray-500 font-semibold px-2 py-1"></div>`+
+    exs.map(k=>`<div class="text-[10px] font-semibold text-center px-1 py-1 leading-tight" style="color:${EX[k].color}">${EX[k].short}</div>`).join('');
+  const body=show.map(r=>{
+    const m={}; r.legs.forEach(l=>m[l.ex]=l.apr);
+    const label=`<div class="text-xs font-bold text-white px-2 py-1.5 flex items-center">${r.coin}</div>`;
+    const cells=exs.map(k=>{
+      const a=m[k];
+      const isL=r.long&&r.long.ex===k, isS=r.short&&r.short.ex===k;
+      const ring=isL?'box-shadow:inset 0 0 0 1.5px #22c55e':isS?'box-shadow:inset 0 0 0 1.5px #ef4444':'';
+      return `<div class="text-[11px] font-mono text-center py-1.5 rounded" style="${heatColor(a)};${ring}">${a==null?'·':(a>=0?'+':'')+a.toFixed(0)}</div>`;
+    }).join('');
+    return label+cells;
+  }).join('');
+  $('heat-body').innerHTML=`<div class="grid gap-1 items-center" style="${cols}">${head}${body}</div>`;
+}
+function setView(v){
+  view=v;
+  $('table-wrap').classList.toggle('hidden',v!=='table');
+  $('heat-wrap').classList.toggle('hidden',v!=='heat');
+  document.querySelectorAll('.view-btn').forEach(b=>{ const on=b.dataset.view===v;
+    b.classList.toggle('bg-gray-700',on); b.classList.toggle('text-white',on); b.classList.toggle('text-gray-500',!on); });
+  render();
+}
+
 // ─── DEX filter chips ───────────────────────────────────────────────────
 function renderDexChips(){
   const box=$('dex-filter');
@@ -420,7 +493,7 @@ function renderDexChips(){
   }).join('');
   box.querySelectorAll('.dex-chip').forEach(b=>b.addEventListener('click',()=>{
     const k=b.dataset.ex; enabledEx.has(k)?enabledEx.delete(k):enabledEx.add(k);
-    renderDexChips(); renderTable();
+    renderDexChips(); render();
   }));
 }
 
@@ -433,24 +506,27 @@ async function load(){
   const live=sources.filter(s=>s.data&&Object.keys(s.data).length).length;
   $('stat-sources').textContent=`${live}/${Object.keys(EX).length}`;
   rows=buildRows(sources);
-  renderTable();
+  render();
   setStatus(live===0?'error':'live');
   $('refresh-icon').style.animation='';
 }
 
 // ─── Auto-refresh & events ──────────────────────────────────────────────
-function startCountdown(){ clearInterval(timer);cd=60;$('stat-refresh').textContent='60s';
-  timer=setInterval(()=>{cd--;$('stat-refresh').textContent=`${cd}s`;if(cd<=0){cd=60;load();}},1000); }
+function startCountdown(){ clearInterval(timer);cd=REFRESH_SEC;$('stat-refresh').textContent=REFRESH_SEC+'s';
+  timer=setInterval(()=>{cd--;$('stat-refresh').textContent=`${cd}s`;if(cd<=0){cd=REFRESH_SEC;load();}},1000); }
 function stopCountdown(){ clearInterval(timer);$('stat-refresh').textContent='OFF'; }
 
 $('autorefresh-toggle').addEventListener('click',()=>{ autoOn=!autoOn;$('autorefresh-toggle').classList.toggle('opacity-40',!autoOn); autoOn?startCountdown():stopCountdown(); });
-$('search').addEventListener('input',renderTable);
-$('min-depth').addEventListener('change',renderTable);
-$('max-spread').addEventListener('change',renderTable);
-$('min-apr').addEventListener('change',renderTable);
-$('dex-all').addEventListener('click',()=>{ enabledEx=new Set(Object.keys(EX)); renderDexChips(); renderTable(); });
-$('dex-none').addEventListener('click',()=>{ enabledEx=new Set(); renderDexChips(); renderTable(); });
+$('search').addEventListener('input',render);
+$('min-depth').addEventListener('change',render);
+$('max-spread').addEventListener('change',render);
+$('min-apr').addEventListener('change',render);
+$('capital').addEventListener('input',render);
+$('dex-all').addEventListener('click',()=>{ enabledEx=new Set(Object.keys(EX)); renderDexChips(); render(); });
+$('dex-none').addEventListener('click',()=>{ enabledEx=new Set(); renderDexChips(); render(); });
 $('refresh-btn').addEventListener('click',()=>{ if(autoOn)startCountdown(); load(); });
+$('view-table').addEventListener('click',()=>setView('table'));
+$('view-heat').addEventListener('click',()=>setView('heat'));
 document.querySelectorAll('.sortable').forEach(th=>th.addEventListener('click',()=>{ const k=th.dataset.sort; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=-1;} renderTable(); }));
 
 document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
