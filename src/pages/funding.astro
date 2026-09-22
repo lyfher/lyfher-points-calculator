@@ -113,9 +113,6 @@ import Layout from '../layouts/Layout.astro';
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="net">
             <span data-en="Net APR" data-es="APR Neto">Net APR</span> <span class="sort-arrow" data-key="net"></span>
           </th>
-          <th class="text-right px-3 py-3" title="Estimated yearly profit on your capital (per leg notional)">
-            <span data-en="Est. $/yr" data-es="Est. $/año">Est. $/yr</span>
-          </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span> <span class="sort-arrow" data-key="spread"></span>
           </th>
@@ -125,7 +122,7 @@ import Layout from '../layouts/Layout.astro';
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="6" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
+        <tr><td colspan="5" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
       </tbody>
     </table>
   </div>
@@ -364,7 +361,7 @@ function renderTable(){
   updateStats(show);
 
   if(!show.length){
-    $('table-body').innerHTML=`<tr><td colspan="6" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
+    $('table-body').innerHTML=`<tr><td colspan="5" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
     return;
   }
 
@@ -372,7 +369,6 @@ function renderTable(){
   $('table-body').innerHTML=show.map((r,i)=>{
     const spreadTxt=r.spread!=null?(r.spread>=0?'+':'')+r.spread.toFixed(3)+'%':'—';
     const spreadCls=r.spread==null?'text-gray-600':Math.abs(r.spread)<0.05?'text-green-400':Math.abs(r.spread)<0.2?'text-yellow-500':'text-red-400';
-    const profit=r.netAPR/100*capital();
     return `
     <tr class="row border-b border-gray-800/60 hover:bg-gray-800/40 transition-colors cursor-pointer" data-i="${i}">
       <td class="px-4 py-3 font-bold text-white">${r.coin}</td>
@@ -380,11 +376,10 @@ function renderTable(){
         <div class="flex items-center justify-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</div>
       </td>
       <td class="px-3 py-3 text-right font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%</td>
-      <td class="px-3 py-3 text-right font-mono text-emerald-400">${fmtMoney(profit)}</td>
       <td class="px-3 py-3 text-right font-mono ${spreadCls}">${spreadTxt}</td>
       <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-400'}">${fmtMoney(r.depth)}</td>
     </tr>
-    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="6" class="px-4 py-3"></td></tr>`;
+    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="5" class="px-4 py-3"></td></tr>`;
   }).join('');
 
   bindRows();
