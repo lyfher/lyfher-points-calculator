@@ -185,14 +185,14 @@ const T = (en, es) => lang() === 'es' ? es : en;
 // ─── Exchange metadata ──────────────────────────────────────────────────
 // tier: A = established/deep, B = growing, C = new/beta
 const EX = {
-  Hyperliquid:{ short:'Hyperliquid', color:'#60a5fa', tier:'A', interval:'1h' },
-  Lighter:    { short:'Lighter',     color:'#a3e635', tier:'A', interval:'1h' },
-  Extended:   { short:'Extended',    color:'#34d399', tier:'B', interval:'1h' },
-  Pacifica:   { short:'Pacifica',    color:'#22d3ee', tier:'B', interval:'1h' },
-  Variational:{ short:'Variational', color:'#a78bfa', tier:'B', interval:'1h' },
-  Arcus:      { short:'Arcus',       color:'#f472b6', tier:'C', interval:'1h' },
-  RiseX:      { short:'RiseX',       color:'#e879f9', tier:'C', interval:'8h' },
-  TxFlow:     { short:'TxFlow',      color:'#4ade80', tier:'C', interval:'1h' },
+  Hyperliquid:{ short:'Hyperliquid', color:'#60a5fa', tier:'A', interval:'1h', ref:'' },
+  Lighter:    { short:'Lighter',     color:'#a3e635', tier:'A', interval:'1h', ref:'' },
+  Extended:   { short:'Extended',    color:'#34d399', tier:'B', interval:'1h', ref:'https://app.extended.exchange/join/LYFHER' },
+  Pacifica:   { short:'Pacifica',    color:'#22d3ee', tier:'B', interval:'1h', ref:'https://app.pacifica.fi?referral=Lyfher' },
+  Variational:{ short:'Variational', color:'#a78bfa', tier:'B', interval:'1h', ref:'' },
+  Arcus:      { short:'Arcus',       color:'#f472b6', tier:'C', interval:'1h', ref:'' },
+  RiseX:      { short:'RiseX',       color:'#e879f9', tier:'C', interval:'8h', ref:'' },
+  TxFlow:     { short:'TxFlow',      color:'#4ade80', tier:'C', interval:'1h', ref:'' },
 };
 const isEst = name => EX[name] && EX[name].tier === 'A';
 
@@ -358,8 +358,9 @@ function legLine(l, role){
   const m=EX[l.ex]||{color:'#9ca3af',short:l.ex,interval:'?'};
   const c=role==='long'?'text-green-400':role==='short'?'text-red-400':'text-gray-400';
   const tag=role==='long'?T('LONG','LARGO'):role==='short'?T('SHORT','CORTO'):'';
+  const name=m.ref?`<a href="${m.ref}" target="_blank" rel="noopener noreferrer" class="hover:underline" style="color:${m.color}">${m.short} ↗</a>`:`<span style="color:${m.color}">${m.short}</span>`;
   return `<div class="flex items-center justify-between gap-3 py-0.5">
-    <span><span style="color:${m.color}">●</span> ${m.short} <span class="text-gray-600">(${m.interval}${m.tier!=='A'?' · '+T('new','nuevo'):''})</span> ${tag?`<span class="${c} font-semibold">${tag}</span>`:''}</span>
+    <span><span style="color:${m.color}">●</span> ${name} <span class="text-gray-600">(${m.interval}${m.tier!=='A'?' · '+T('new','nuevo'):''})</span> ${tag?`<span class="${c} font-semibold">${tag}</span>`:''}</span>
     <span class="font-mono ${l.apr>=0?'text-green-400':'text-red-400'}">${l.apr>=0?'+':''}${l.apr.toFixed(1)}%</span>
   </div>`;
 }
@@ -376,6 +377,8 @@ function buildDetail(r){
       ${T('Best play','Mejor jugada')}: <b class="text-green-400">${T('LONG','LARGO')} ${(EX[r.long.ex]||{}).short}</b> / <b class="text-red-400">${T('SHORT','CORTO')} ${(EX[r.short.ex]||{}).short}</b> →
       <b class="text-white">+${r.netAPR.toFixed(2)}% ${T('net APR','APR neto')}</b>
     </div>
+    ${(() => { const btn=(l)=>{ const m=EX[l.ex]||{}; return m.ref?`<a href="${m.ref}" target="_blank" rel="noopener noreferrer" class="inline-block px-2.5 py-1 rounded border font-semibold" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${T('Open','Abrir')} ${m.short} ↗</a>`:''; };
+      const b=[btn(r.long),btn(r.short)].filter(Boolean).join(' '); return b?`<div class="mt-2 flex gap-2">${b}</div>`:''; })()}
     ${(depthWarn?`<div class="mt-1 text-red-400">⚠ ${T('Thin market ('+fmtMoney(r.depth)+' OI) — funding may not hold and slippage is high.','Mercado fino ('+fmtMoney(r.depth)+' OI) — el funding puede no sostenerse y el slippage es alto.')}</div>`:'')}
     ${(newLeg?`<div class="mt-1 text-yellow-500">⚠ ${T('Involves a newer exchange — higher counterparty risk.','Involucra un exchange nuevo — mayor riesgo de contraparte.')}</div>`:'')}
   </div>`;
