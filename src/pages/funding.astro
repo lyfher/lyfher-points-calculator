@@ -398,7 +398,7 @@ function renderTable(){
   let show=getFiltered();
   show.sort((a,b)=>{ let av,bv;
     if(sortKey==='net'){av=a.netAPR;bv=b.netAPR;}
-    else if(sortKey==='spread'){av=Math.abs(a.spread??999);bv=Math.abs(b.spread??999);}
+    else if(sortKey==='spread'){av=a.spread??999;bv=b.spread??999;}
     else if(sortKey==='depth'){av=a.depth??-1;bv=b.depth??-1;}
     else{av=a.sources;bv=b.sources;}
     return (av-bv)*sortDir; });
@@ -413,7 +413,7 @@ function renderTable(){
   window._show=show;
   $('table-body').innerHTML=show.map((r,i)=>{
     const spreadTxt=r.spread!=null?(r.spread>=0?'+':'')+r.spread.toFixed(3)+'%':'—';
-    const spreadCls=r.spread==null?'text-gray-600':Math.abs(r.spread)<0.05?'text-green-400':Math.abs(r.spread)<0.2?'text-yellow-500':'text-red-400';
+    const spreadCls=r.spread==null?'text-gray-600':r.spread<=0.05?'text-green-400':r.spread<=0.3?'text-yellow-500':'text-red-400';
     return `
     <tr class="row border-b border-gray-800/60 hover:bg-gray-800/40 transition-colors cursor-pointer" data-i="${i}">
       <td class="px-4 py-3 font-bold text-white">${r.coin}</td>
@@ -458,7 +458,8 @@ function tipHtml(r){
   const sp=r.spread;
   let spLine;
   if(sp==null) spLine=T('Entry: no price feed to check.','Entrada: sin precio para verificar.');
-  else if(Math.abs(sp)<=0.05) spLine=T('Cheap entry — start flat, farm the funding.','Entrada barata — empiezas a la par y farmeas.');
+  else if(sp<0) spLine=T(`Entry pays you ${Math.abs(sp).toFixed(2)}% — you open at a credit, then farm funding.`,`La entrada te paga ${Math.abs(sp).toFixed(2)}% — abres con crédito y farmeas.`);
+  else if(sp<=0.05) spLine=T('Cheap entry — start flat, farm the funding.','Entrada barata — empiezas a la par y farmeas.');
   else spLine=T(`Entry costs ${sp.toFixed(2)}% — recovered by funding if it holds.`,`Entrada cuesta ${sp.toFixed(2)}% — se recupera con el funding si se mantiene.`);
   const cap=capital(), yr=r.netAPR/100*cap, dy=yr/365;
   const profitLine=cap>0?`<div class="text-emerald-400 mb-0.5">${fmtMoney(yr)}/yr · ${fmtMoney(dy)}/day ${T('on','sobre')} ${fmtMoney(cap)}</div>`:'';
