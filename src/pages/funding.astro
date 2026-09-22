@@ -102,6 +102,9 @@ import Layout from '../layouts/Layout.astro';
   </button>
 </div>
 
+<!-- Top pick -->
+<div id="top-pick" class="hidden mb-4"></div>
+
 <!-- Table -->
 <div id="table-wrap" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-6">
   <div class="overflow-x-auto">
@@ -347,7 +350,44 @@ function updateStats(show){
   $('stat-ops').textContent=show.length||'0';
   $('stat-best').textContent=show.length?('+'+Math.max(...show.map(r=>r.netAPR)).toFixed(1)+'%'):'—';
 }
-function render(){ view==='heat'?renderHeat():renderTable(); }
+function render(){ const f=getFiltered(); renderTop(f); view==='heat'?renderHeat():renderTable(); }
+
+// Score an opportunity: high APR, cheap entry (negative spread = free), penalize slow recovery
+function scoreRow(r){
+  const sp=r.spread==null?0.1:r.spread;
+  const entryCost=Math.max(sp,0);                       // negative spread costs nothing to enter
+  const daysToRecover=r.netAPR>0?entryCost/(r.netAPR/365):999;
+  return r.netAPR - daysToRecover*2;
+}
+function openBtn(l){ const m=EX[l.ex]||{}; return m.ref?`<a href="${m.ref}" target="_blank" rel="noopener noreferrer" class="inline-block px-2.5 py-1 rounded-lg border text-xs font-semibold" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${T('Open','Abrir')} ${m.short} ↗</a>`:''; }
+function renderTop(list){
+  const box=$('top-pick');
+  if(!list.length){ box.classList.add('hidden'); box.innerHTML=''; return; }
+  const r=list.slice().sort((a,b)=>scoreRow(b)-scoreRow(a))[0];
+  const sp=r.spread;
+  const spTxt=sp==null?'—':(sp>=0?'+':'')+sp.toFixed(3)+'%';
+  const spCls=sp==null?'text-gray-500':sp<=0.05?'text-green-400':'text-yellow-400';
+  const why=sp!=null&&sp<=0
+    ? T('Negative entry spread — they pay you to open.','Spread de entrada negativo — te pagan por abrir.')
+    : (sp!=null&&sp<=0.05
+      ? T('Cheap entry, strong funding spread.','Entrada barata, fuerte spread de funding.')
+      : T('Best funding after entry cost & depth.','Mejor funding tras costo de entrada y profundidad.'));
+  const btns=[openBtn(r.long),openBtn(r.short)].filter(Boolean).join(' ');
+  box.innerHTML=`
+    <div class="rounded-2xl p-4 border border-green-500/40 bg-green-500/5" style="box-shadow:0 0 24px rgba(34,197,94,0.10)">
+      <div class="flex items-center flex-wrap gap-x-4 gap-y-2">
+        <span class="text-xs font-bold uppercase tracking-widest text-green-400">🔥 ${T('Top pick','Top del momento')}</span>
+        <span class="text-lg font-bold text-white">${r.coin}</span>
+        <span class="flex items-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</span>
+        <span class="text-lg font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}% <span class="text-xs font-medium text-gray-500">APR</span></span>
+        <span class="text-sm">${T('spread','spread')} <span class="font-mono ${spCls}">${spTxt}</span></span>
+        <span class="text-sm text-gray-400">${T('depth','profundidad')} <span class="font-mono">${fmtMoney(r.depth)}</span></span>
+        ${btns?`<span class="ml-auto flex gap-2">${btns}</span>`:''}
+      </div>
+      <div class="text-xs text-gray-500 mt-2">${why}</div>
+    </div>`;
+  box.classList.remove('hidden');
+}
 
 function renderTable(){
   let show=getFiltered();
