@@ -133,7 +133,7 @@ import Layout from '../layouts/Layout.astro';
 
 <!-- Heatmap -->
 <div id="heat-wrap" class="hidden bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-6">
-  <div class="px-4 py-2.5 border-b border-gray-800 text-xs text-gray-500"
+  <div class="px-4 py-2.5 border-b border-gray-800 text-sm text-gray-400"
        data-en="Each cell = that coin's funding APR on that DEX. Hover any cell for the recommended action. Green outline = best leg to LONG, red outline = best to SHORT."
        data-es="Cada celda = el APR de funding de ese coin en ese DEX. Pasa el mouse por una celda para ver la acción recomendada. Borde verde = mejor pata para LARGO, borde rojo = mejor para CORTO.">
     Each cell = that coin's funding APR on that DEX. Hover for the recommended action.
@@ -153,7 +153,7 @@ import Layout from '../layouts/Layout.astro';
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
       <h3 class="text-sm font-semibold text-green-400 mb-1" data-en="1. Open both legs" data-es="1. Abre ambas patas">1. Open both legs</h3>
-      <p class="text-xs text-gray-500 leading-relaxed"
+      <p class="text-sm text-gray-300 leading-relaxed"
          data-en="Long the exchange with the lowest (most negative) funding and short the one with the highest. Equal notional on both — you're neutral to price."
          data-es="Ve largo en el exchange con funding más bajo (más negativo) y corto en el más alto. Mismo nocional en ambos — quedas neutral al precio.">
         Long the lowest funding, short the highest. Equal notional — neutral to price.
@@ -161,7 +161,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
     <div>
       <h3 class="text-sm font-semibold text-green-400 mb-1" data-en="2. Collect the spread" data-es="2. Cobra el spread">2. Collect the spread</h3>
-      <p class="text-xs text-gray-500 leading-relaxed"
+      <p class="text-sm text-gray-300 leading-relaxed"
          data-en="Funding pays every 1–8h depending on the exchange. The short receives when funding is positive; the long receives when negative. You pocket the difference (Net APR)."
          data-es="El funding se paga cada 1–8h según el exchange. El corto cobra cuando el funding es positivo; el largo cobra cuando es negativo. Te quedas con la diferencia (APR Neto).">
         Funding pays every 1–8h. You pocket the difference (Net APR).
@@ -169,7 +169,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
     <div>
       <h3 class="text-sm font-semibold text-yellow-400 mb-1" data-en="3. Entry spread & rebalancing" data-es="3. Spread de entrada y rebalanceo">3. Entry spread & rebalancing</h3>
-      <p class="text-xs text-gray-500 leading-relaxed"
+      <p class="text-sm text-gray-300 leading-relaxed"
          data-en="The price spread is your entry cost, not profit. Small/negative = cheap entry. If it widens after you enter, one leg shows unrealized loss (offset by the other) and stresses margin — rebalance or wait for it to converge."
          data-es="El spread de precio es tu costo de entrada, no ganancia. Pequeño/negativo = entrada barata. Si se ensancha después de entrar, una pata queda en pérdida no realizada (compensada por la otra) y estresa el margen — rebalancea o espera a que converja.">
         Price spread = entry cost. If it widens, rebalance or wait for convergence.
@@ -177,7 +177,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
     <div>
       <h3 class="text-sm font-semibold text-red-400 mb-1" data-en="4. Depth & risks" data-es="4. Profundidad y riesgos">4. Depth & risks</h3>
-      <p class="text-xs text-gray-500 leading-relaxed"
+      <p class="text-sm text-gray-300 leading-relaxed"
          data-en="Juicy funding on a thin market is a trap — you can't size in without moving price and funding normalizes fast. Filter by depth. Funding flips, fees and slippage eat profit. New exchanges carry counterparty risk."
          data-es="Un funding jugoso en un mercado fino es una trampa — no puedes entrar sin mover el precio y el funding se normaliza rápido. Filtra por profundidad. Los flips de funding, fees y slippage reducen la ganancia. Los exchanges nuevos tienen riesgo de contraparte.">
         Thin markets are traps. Filter by depth. Fees, flips and slippage eat profit.
@@ -187,7 +187,7 @@ import Layout from '../layouts/Layout.astro';
 </div>
 
 <section class="mt-4 border-t border-gray-800 pt-6 text-center">
-  <p class="text-gray-600 text-sm max-w-xl mx-auto"
+  <p class="text-gray-400 text-sm max-w-xl mx-auto"
      data-en="Funding rates are normalized to annualized APR (as shown on each exchange) and are before fees & slippage. Not financial advice — always verify on the exchange."
      data-es="Las tasas de funding se normalizan a APR anualizado (como se muestran en cada exchange) y son antes de fees y slippage. No es asesoría financiera — verifica siempre en el exchange.">
     Funding rates are normalized to annualized APR, before fees & slippage.
@@ -390,7 +390,7 @@ function renderTop(list){
         <span class="text-sm text-gray-400">${T('depth','profundidad')} <span class="font-mono">${fmtMoney(r.depth)}</span></span>
         ${btns?`<span class="ml-auto flex gap-2">${btns}</span>`:''}
       </div>
-      <div class="text-xs text-gray-500 mt-2">${why}</div>
+      <div class="text-sm text-gray-400 mt-2">${why}</div>
     </div>`;
   box.classList.remove('hidden');
   const tip=$('tip'), card=$('top-card');
@@ -427,7 +427,7 @@ function renderTable(){
       </td>
       <td class="px-3 py-3 text-right font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%</td>
       <td class="px-3 py-3 text-right font-mono ${spreadCls}">${spreadTxt}</td>
-      <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-400'}">${fmtMoney(r.depth)}</td>
+      <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-200'}">${fmtMoney(r.depth)}</td>
     </tr>
     <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="5" class="px-4 py-3"></td></tr>`;
   }).join('');
