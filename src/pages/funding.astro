@@ -122,8 +122,9 @@ import Layout from '../layouts/Layout.astro';
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span> <span class="sort-arrow" data-key="spread"></span>
           </th>
-          <th class="sortable text-right px-4 py-3 cursor-pointer hover:text-white select-none" data-sort="depth">
-            <span data-en="Depth" data-es="Profundidad">Depth</span> <span class="sort-arrow" data-key="depth"></span>
+          <th class="sortable text-right px-4 py-3 cursor-pointer hover:text-white select-none" data-sort="depth"
+              title="Depth = USD open interest on the thinner leg. How much size the market can absorb before slippage. High = safe to size in; low = juicy funding but a trap.">
+            <span data-en="Depth" data-es="Profundidad">Depth</span> <span class="text-gray-600 font-normal">ⓘ</span> <span class="sort-arrow" data-key="depth"></span>
           </th>
         </tr>
       </thead>
