@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Lyfher — Delta-Neutral Funding Scanner" description="Live funding rates across 10 perp exchanges to spot delta-neutral farming opportunities and capture the spread.">
+<Layout title="Lyfher — Delta-Neutral Funding Scanner" description="Live funding rates across decentralized perp DEXs to spot delta-neutral farming opportunities and capture the spread.">
 
 <!-- Hero -->
 <section class="text-center py-8">
@@ -11,9 +11,9 @@ import Layout from '../layouts/Layout.astro';
     <span class="text-green-400"> Scanner</span>
   </h1>
   <p class="text-gray-400 text-base max-w-2xl mx-auto"
-     data-en="Live funding across 10 perp exchanges. Long where they pay you, short where you pay, stay neutral to price and farm the funding spread — filtered for real depth."
-     data-es="Funding en vivo en 10 exchanges de perps. Ve largo donde te pagan, corto donde pagas, mantente neutral al precio y farmea el spread — filtrado por profundidad real.">
-    Live funding across 10 perp exchanges — filtered for real depth.
+     data-en="Live funding across decentralized perp DEXs. Long where they pay you, short where you pay, stay neutral to price and farm the funding spread — filtered for real depth."
+     data-es="Funding en vivo en perp DEXs descentralizados. Ve largo donde te pagan, corto donde pagas, mantente neutral al precio y farmea el spread — filtrado por profundidad real.">
+    Live funding across decentralized perp DEXs — filtered for real depth.
   </p>
 </section>
 
@@ -109,11 +109,24 @@ import Layout from '../layouts/Layout.astro';
       <option value="2">2%</option>
       <option value="999">All</option>
     </select>
-    <label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none">
-      <input id="est-only" type="checkbox" class="accent-green-500"/>
-      <span data-en="Established only" data-es="Solo consolidados">Established only</span>
-    </label>
+    <label class="text-xs text-gray-500" data-en="Min APR" data-es="APR mín">Min APR</label>
+    <select id="min-apr" class="bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
+      <option value="0" selected>All</option>
+      <option value="5">5%</option>
+      <option value="10">10%</option>
+      <option value="20">20%</option>
+      <option value="50">50%</option>
+      <option value="100">100%</option>
+    </select>
   </div>
+</div>
+
+<!-- DEX filter chips -->
+<div class="flex items-center gap-2 flex-wrap mb-4">
+  <span class="text-xs text-gray-500 mr-1" data-en="DEXs:" data-es="DEXs:">DEXs:</span>
+  <div id="dex-filter" class="flex flex-wrap gap-1.5"></div>
+  <button id="dex-all" class="text-xs text-gray-500 hover:text-white underline ml-1" data-en="all" data-es="todos">all</button>
+  <button id="dex-none" class="text-xs text-gray-500 hover:text-white underline" data-en="none" data-es="ninguno">none</button>
 </div>
 <div class="flex items-center gap-2 mb-4">
   <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse shrink-0"></div>
@@ -138,16 +151,13 @@ import Layout from '../layouts/Layout.astro';
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span> <span class="sort-arrow" data-key="spread"></span>
           </th>
-          <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="depth">
+          <th class="sortable text-right px-4 py-3 cursor-pointer hover:text-white select-none" data-sort="depth">
             <span data-en="Depth" data-es="Profundidad">Depth</span> <span class="sort-arrow" data-key="depth"></span>
-          </th>
-          <th class="sortable text-right px-4 py-3 cursor-pointer hover:text-white select-none" data-sort="sources">
-            <span data-en="Exch." data-es="Exch.">Exch.</span> <span class="sort-arrow" data-key="sources"></span>
           </th>
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="6" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
+        <tr><td colspan="5" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
       </tbody>
     </table>
   </div>
@@ -209,6 +219,7 @@ import Layout from '../layouts/Layout.astro';
 const REFRESH_MS = 60000;
 let rows = [], timer = null, autoOn = true, cd = 60;
 let sortKey = 'net', sortDir = -1;
+let enabledEx = null;   // Set of enabled exchange keys (null = all until built)
 const $ = id => document.getElementById(id);
 const lang = () => document.documentElement.lang || 'en';
 const T = (en, es) => lang() === 'es' ? es : en;
@@ -217,8 +228,6 @@ const T = (en, es) => lang() === 'es' ? es : en;
 // tier: A = established/deep, B = growing, C = new/beta
 const EX = {
   Hyperliquid:{ short:'Hyperliquid', color:'#60a5fa', tier:'A', interval:'1h' },
-  Binance:    { short:'Binance',     color:'#facc15', tier:'A', interval:'8h' },
-  Bybit:      { short:'Bybit',       color:'#fb923c', tier:'A', interval:'8h' },
   Lighter:    { short:'Lighter',     color:'#a3e635', tier:'A', interval:'1h' },
   Extended:   { short:'Extended',    color:'#34d399', tier:'B', interval:'1h' },
   Pacifica:   { short:'Pacifica',    color:'#22d3ee', tier:'B', interval:'1h' },
@@ -268,20 +277,6 @@ async function fetchHL(){
     if(!isNaN(f)) out[normCoin(u.name)]={apr:f*24*365*100,px,oiUsd:parseFloat(c.openInterest)*px||null,volUsd:parseFloat(c.dayNtlVlm)||null}; });
   return {ex:'Hyperliquid',data:out};
 }
-async function fetchBinance(){
-  const r=await fetch('https://fapi.binance.com/fapi/v1/premiumIndex');
-  if(!r.ok) throw 0; const d=await r.json(); const out={};
-  d.forEach(x=>{ if(!/USDT$/.test(x.symbol)) return; const f=parseFloat(x.lastFundingRate); const px=parseFloat(x.markPrice);
-    if(!isNaN(f)) out[normCoin(x.symbol)]={apr:f*3*365*100,px,oiUsd:null,volUsd:null}; });
-  return {ex:'Binance',data:out};
-}
-async function fetchBybit(){
-  const r=await fetch('https://api.bybit.com/v5/market/tickers?category=linear');
-  if(!r.ok) throw 0; const j=await r.json(); const out={};
-  (j.result?.list||[]).forEach(x=>{ if(!/USDT$/.test(x.symbol)) return; const f=parseFloat(x.fundingRate); const px=parseFloat(x.markPrice||x.lastPrice);
-    if(!isNaN(f)) out[normCoin(x.symbol)]={apr:f*3*365*100,px,oiUsd:parseFloat(x.openInterestValue)||null,volUsd:parseFloat(x.turnover24h)||null}; });
-  return {ex:'Bybit',data:out};
-}
 async function fetchLighter(){
   const r=await fetch('https://mainnet.zklighter.elliot.ai/api/v1/funding-rates');
   if(!r.ok) throw 0; const j=await r.json(); const out={};
@@ -324,28 +319,28 @@ async function fetchProxy(){
   return res;
 }
 
-const CLIENT=[fetchHL,fetchBinance,fetchBybit,fetchLighter,fetchPacifica,fetchVariational,fetchArcus];
+const CLIENT=[fetchHL,fetchLighter,fetchPacifica,fetchVariational,fetchArcus];
 
 // ─── Build rows ─────────────────────────────────────────────────────────
 function buildRows(sources){
   const coins={};
   sources.forEach(({ex,data})=>{ if(!data) return;
     for(const c in data){ if(!coins[c]) coins[c]={coin:c,byEx:{}}; coins[c].byEx[ex]=data[c]; } });
-  return Object.values(coins).map(c=>{
-    const legs=Object.entries(c.byEx).map(([ex,d])=>({ex,...d})).sort((a,b)=>a.apr-b.apr);
-    if(legs.length<2) return null;
-    const long=legs[0], short=legs[legs.length-1];   // long lowest apr, short highest
-    const netAPR=short.apr-long.apr;
-    // entry spread signed: long price vs short price
-    let spread=null;
-    if(long.px&&short.px) spread=((long.px-short.px)/short.px)*100;
-    // depth = smaller of the two legs' known depth (limiting), fallback to coin max
-    const depths=legs.map(l=>l.oiUsd).filter(v=>v!=null);
-    const legDepth=[long.oiUsd,short.oiUsd].filter(v=>v!=null);
-    const depth=legDepth.length?Math.min(...legDepth):(depths.length?Math.max(...depths):null);
-    const maxDepth=depths.length?Math.max(...depths):null;
-    return {coin:c.coin,legs,long,short,netAPR,spread,depth,maxDepth,sources:legs.length};
-  }).filter(Boolean);
+  return Object.values(coins).map(c=>({coin:c.coin, allLegs:Object.entries(c.byEx).map(([ex,d])=>({ex,...d}))}));
+}
+
+// Derive the best pair from the currently enabled DEXs only
+function deriveRow(row){
+  const legs=row.allLegs.filter(l=>enabledEx.has(l.ex)).sort((a,b)=>a.apr-b.apr);
+  if(legs.length<2) return null;
+  const long=legs[0], short=legs[legs.length-1];   // long lowest apr, short highest
+  const netAPR=short.apr-long.apr;
+  let spread=null;                                  // signed entry spread: long px vs short px
+  if(long.px&&short.px) spread=((long.px-short.px)/short.px)*100;
+  const legDepth=[long.oiUsd,short.oiUsd].filter(v=>v!=null);
+  const allD=legs.map(l=>l.oiUsd).filter(v=>v!=null);
+  const depth=legDepth.length?Math.min(...legDepth):(allD.length?Math.max(...allD):null);
+  return {coin:row.coin, legs, long, short, netAPR, spread, depth, sources:legs.length};
 }
 
 // ─── Render ─────────────────────────────────────────────────────────────
@@ -363,13 +358,14 @@ function passFilters(r){
   // wide price gap between the two legs = dislocation / illiquidity / bad feed, not a clean entry
   const ms=parseFloat($('max-spread').value)||999;
   if(r.spread!=null && Math.abs(r.spread)>ms) return false;
-  if($('est-only').checked && !(isEst(r.long.ex)&&isEst(r.short.ex))) return false;
+  const minA=parseFloat($('min-apr').value)||0;
+  if(r.netAPR<minA) return false;
   return true;
 }
 
 function renderTable(){
   const q=$('search').value.trim().toUpperCase();
-  let show=rows.filter(r=>(!q||r.coin.includes(q)) && passFilters(r));
+  let show=rows.map(deriveRow).filter(Boolean).filter(r=>(!q||r.coin.includes(q)) && passFilters(r));
   show.sort((a,b)=>{ let av,bv;
     if(sortKey==='net'){av=a.netAPR;bv=b.netAPR;}
     else if(sortKey==='spread'){av=Math.abs(a.spread??999);bv=Math.abs(b.spread??999);}
@@ -381,7 +377,7 @@ function renderTable(){
   $('stat-best').textContent=show.length?('+'+Math.max(...show.map(r=>r.netAPR)).toFixed(1)+'%'):'—';
 
   if(!show.length){
-    $('table-body').innerHTML=`<tr><td colspan="6" class="text-center py-16 text-gray-600">${T('No results — loosen the depth filter','Sin resultados — baja el filtro de profundidad')}</td></tr>`;
+    $('table-body').innerHTML=`<tr><td colspan="5" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
     return;
   }
 
@@ -397,10 +393,9 @@ function renderTable(){
       </td>
       <td class="px-3 py-3 text-right font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%</td>
       <td class="px-3 py-3 text-right font-mono ${spreadCls}">${spreadTxt}</td>
-      <td class="px-3 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-400'}">${fmtMoney(r.depth)}</td>
-      <td class="px-4 py-3 text-right text-gray-400">${r.sources}</td>
+      <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-400'}">${fmtMoney(r.depth)}</td>
     </tr>
-    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="6" class="px-4 py-3"></td></tr>`;
+    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="5" class="px-4 py-3"></td></tr>`;
   }).join('');
 
   bindRows();
@@ -439,13 +434,12 @@ function tipHtml(r){
   const l=(EX[r.long.ex]||{}).short, s=(EX[r.short.ex]||{}).short;
   const sp=r.spread;
   let spLine;
-  if(sp==null) spLine=T('Entry spread unknown (one leg has no price feed).','Spread de entrada desconocido (una pata sin feed de precio).');
-  else if(sp<=0.05) spLine=T(`Entry spread ${(sp>=0?'+':'')+sp.toFixed(3)}% — cheap/neutral entry. You start near flat and farm the funding.`,`Spread de entrada ${(sp>=0?'+':'')+sp.toFixed(3)}% — entrada barata/neutral. Empiezas casi a la par y farmeas el funding.`);
-  else spLine=T(`Entry spread +${sp.toFixed(3)}% — you enter paying the long ${sp.toFixed(3)}% richer than the short. You recover it via funding if it holds; if it widens, the long shows unrealized loss and margin tightens.`,`Spread de entrada +${sp.toFixed(3)}% — entras pagando el largo ${sp.toFixed(3)}% más caro que el corto. Lo recuperas con el funding si se mantiene; si se ensancha, el largo queda en pérdida no realizada y el margen se aprieta.`);
-  return `<div class="font-semibold text-white mb-1">${r.coin}: ${T('LONG','LARGO')} ${l} / ${T('SHORT','CORTO')} ${s}</div>
-    <div class="text-green-400 mb-1">+${r.netAPR.toFixed(2)}% ${T('net funding APR','APR neto de funding')}</div>
-    <div class="text-gray-400 mb-1">${spLine}</div>
-    <div class="text-gray-500">${T('Depth','Profundidad')}: ${fmtMoney(r.depth)} · ${r.sources} ${T('exchanges','exchanges')} · ${T('click to expand','clic para expandir')}</div>`;
+  if(sp==null) spLine=T('Entry: no price feed to check.','Entrada: sin precio para verificar.');
+  else if(Math.abs(sp)<=0.05) spLine=T('Cheap entry — start flat, farm the funding.','Entrada barata — empiezas a la par y farmeas.');
+  else spLine=T(`Entry costs ${sp.toFixed(2)}% — recovered by funding if it holds.`,`Entrada cuesta ${sp.toFixed(2)}% — se recupera con el funding si se mantiene.`);
+  return `<div class="font-semibold text-white mb-1">${T('LONG','LARGO')} <span class="text-green-400">${l}</span> · ${T('SHORT','CORTO')} <span class="text-red-400">${s}</span></div>
+    <div class="text-green-400 mb-0.5">+${r.netAPR.toFixed(1)}% APR</div>
+    <div class="text-gray-400">${spLine}</div>`;
 }
 
 function bindRows(){
@@ -465,6 +459,20 @@ function bindRows(){
 }
 
 function updateSortArrows(){ document.querySelectorAll('.sort-arrow').forEach(el=>{ el.textContent=el.dataset.key===sortKey?(sortDir<0?'▼':'▲'):''; }); }
+
+// ─── DEX filter chips ───────────────────────────────────────────────────
+function renderDexChips(){
+  const box=$('dex-filter');
+  box.innerHTML=Object.keys(EX).map(k=>{
+    const on=enabledEx.has(k), m=EX[k];
+    return `<button class="dex-chip text-xs font-semibold px-2 py-0.5 rounded border transition-opacity" data-ex="${k}"
+      style="color:${m.color};border-color:${m.color}55;background:${m.color}14;opacity:${on?1:0.3}">${m.short}</button>`;
+  }).join('');
+  box.querySelectorAll('.dex-chip').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset.ex; enabledEx.has(k)?enabledEx.delete(k):enabledEx.add(k);
+    renderDexChips(); renderTable();
+  }));
+}
 
 // ─── Load ───────────────────────────────────────────────────────────────
 async function load(){
@@ -491,10 +499,13 @@ $('calc-toggle').addEventListener('click',()=>{ $('calc-body').classList.toggle(
 $('search').addEventListener('input',renderTable);
 $('min-depth').addEventListener('change',renderTable);
 $('max-spread').addEventListener('change',renderTable);
-$('est-only').addEventListener('change',renderTable);
+$('min-apr').addEventListener('change',renderTable);
+$('dex-all').addEventListener('click',()=>{ enabledEx=new Set(Object.keys(EX)); renderDexChips(); renderTable(); });
+$('dex-none').addEventListener('click',()=>{ enabledEx=new Set(); renderDexChips(); renderTable(); });
 $('refresh-btn').addEventListener('click',()=>{ if(autoOn)startCountdown(); load(); });
 document.querySelectorAll('.sortable').forEach(th=>th.addEventListener('click',()=>{ const k=th.dataset.sort; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=-1;} renderTable(); }));
 
 document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
+enabledEx=new Set(Object.keys(EX)); renderDexChips();
 updateCalc(); load(); startCountdown();
 </script>
