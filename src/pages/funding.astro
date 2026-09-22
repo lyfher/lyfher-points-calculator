@@ -1,0 +1,399 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Lyfher — Delta-Neutral Funding Scanner" description="Live funding rates across exchanges to spot delta-neutral farming opportunities and capture the spread.">
+
+<!-- Hero -->
+<section class="text-center py-8">
+  <h1 class="text-4xl sm:text-5xl font-bold text-white mb-3">
+    <span data-en="Delta-Neutral" data-es="Delta-Neutral">Delta-Neutral</span>
+    <span class="text-green-400"> Scanner</span>
+  </h1>
+  <p class="text-gray-400 text-base max-w-2xl mx-auto"
+     data-en="Live funding across exchanges to spot delta-neutral opportunities. Long the exchange paying you, short the one you pay, stay neutral to price and farm the funding spread."
+     data-es="Funding en vivo entre exchanges para detectar oportunidades delta-neutral. Ve largo donde te pagan, corto donde pagas, mantente neutral al precio y farmea el spread de funding.">
+    Live funding across exchanges to spot delta-neutral opportunities.
+  </p>
+</section>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+    <div id="stat-ops" class="text-2xl font-bold text-green-400">—</div>
+    <div class="text-xs text-gray-500 mt-0.5" data-en="Opportunities" data-es="Oportunidades">Opportunities</div>
+  </div>
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+    <div id="stat-best" class="text-2xl font-bold text-emerald-400">—</div>
+    <div class="text-xs text-gray-500 mt-0.5" data-en="Best net APR" data-es="Mejor APR neto">Best net APR</div>
+  </div>
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+    <div id="stat-sources" class="text-2xl font-bold text-blue-400">—</div>
+    <div class="text-xs text-gray-500 mt-0.5" data-en="Sources live" data-es="Fuentes activas">Sources live</div>
+  </div>
+  <div id="autorefresh-toggle" class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center cursor-pointer select-none">
+    <div id="stat-refresh" class="text-2xl font-bold text-yellow-400">60s</div>
+    <div class="text-xs text-gray-500 mt-0.5" data-en="Auto-refresh" data-es="Auto-actualizar">Auto-refresh</div>
+  </div>
+</div>
+
+<!-- Delta-neutral calculator -->
+<div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 mb-6">
+  <div id="calc-toggle" class="flex items-center justify-between cursor-pointer select-none">
+    <span class="text-sm font-semibold text-white">
+      💰 <span data-en="Delta-Neutral Calculator" data-es="Calculadora Delta-Neutral">Delta-Neutral Calculator</span>
+    </span>
+    <span id="calc-chevron" class="text-gray-500 text-sm">▼</span>
+  </div>
+  <div id="calc-body" class="mt-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1" data-en="Capital ($)" data-es="Capital ($)">Capital ($)</label>
+        <input id="calc-capital" type="number" value="1000" min="1"
+               class="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"/>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1" data-en="Leverage (x)" data-es="Apalancamiento (x)">Leverage (x)</label>
+        <input id="calc-lev" type="number" value="3" min="1" max="20" step="0.5"
+               class="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"/>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1" data-en="Net funding APR (%)" data-es="APR neto de funding (%)">Net funding APR (%)</label>
+        <input id="calc-apr" type="number" value="20" step="0.1"
+               class="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"/>
+      </div>
+    </div>
+    <div id="calc-result" class="mt-4 bg-gray-950 border border-green-800 rounded-xl p-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+        <div><div class="text-xs text-gray-500 mb-1" data-en="Notional / leg" data-es="Nocional / pata">Notional / leg</div><div id="calc-notional" class="text-lg font-bold text-white">—</div></div>
+        <div><div class="text-xs text-gray-500 mb-1" data-en="Daily" data-es="Diario">Daily</div><div id="calc-daily" class="text-lg font-bold text-green-400">—</div></div>
+        <div><div class="text-xs text-gray-500 mb-1" data-en="Monthly" data-es="Mensual">Monthly</div><div id="calc-monthly" class="text-lg font-bold text-green-400">—</div></div>
+        <div><div class="text-xs text-gray-500 mb-1" data-en="Yearly" data-es="Anual">Yearly</div><div id="calc-yearly" class="text-lg font-bold text-green-400">—</div></div>
+      </div>
+      <p class="text-xs text-gray-600 mt-3 text-center"
+         data-en="Estimate before fees & slippage. Notional per leg = capital × leverage ÷ 2 (split long/short)."
+         data-es="Estimado antes de fees y slippage. Nocional por pata = capital × apalancamiento ÷ 2 (dividido long/short).">
+        Estimate before fees & slippage.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Scanner header -->
+<div class="flex items-center gap-2 mb-3">
+  <span class="text-lg">🔬</span>
+  <h2 class="text-lg font-bold text-white" data-en="Live Scanner" data-es="Scanner en Vivo">Live Scanner</h2>
+</div>
+
+<!-- Controls -->
+<div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+  <div class="flex items-center gap-2 flex-1 min-w-40">
+    <input id="search" type="text" placeholder="BTC, ETH, SOL…"
+           data-placeholder-en="BTC, ETH, SOL…" data-placeholder-es="BTC, ETH, SOL…"
+           class="flex-1 bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-green-500"/>
+  </div>
+  <div class="flex items-center gap-2">
+    <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse shrink-0"></div>
+    <span id="status-text" class="text-sm text-gray-500">Loading…</span>
+    <button id="refresh-btn" class="flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-green-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">
+      <span id="refresh-icon" class="inline-block">↻</span>
+      <span data-en="Refresh" data-es="Actualizar">Refresh</span>
+    </button>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-6">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase">
+          <th class="text-left px-4 py-3" data-en="Symbol" data-es="Símbolo">Symbol</th>
+          <th class="text-center px-3 py-3">
+            <span data-en="Best Pair (Long / Short)" data-es="Mejor Par (Long / Short)">Best Pair (Long / Short)</span>
+          </th>
+          <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="net">
+            <span data-en="Net APR" data-es="APR Neto">Net APR</span> <span class="sort-arrow" data-key="net"></span>
+          </th>
+          <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
+            <span data-en="Price Spread" data-es="Spread Precio">Price Spread</span> <span class="sort-arrow" data-key="spread"></span>
+          </th>
+          <th class="sortable text-right px-4 py-3 cursor-pointer hover:text-white select-none" data-sort="sources">
+            <span data-en="Sources" data-es="Fuentes">Sources</span> <span class="sort-arrow" data-key="sources"></span>
+          </th>
+          <th class="text-right px-4 py-3" data-en="Action" data-es="Acción">Action</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="6" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Guide -->
+<div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-5 mb-6">
+  <h2 class="text-base font-bold text-white mb-4" data-en="How delta-neutral farming works" data-es="Cómo funciona el farming delta-neutral">How delta-neutral farming works</h2>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <h3 class="text-sm font-semibold text-green-400 mb-1" data-en="1. Open both legs" data-es="1. Abre ambas patas">1. Open both legs</h3>
+      <p class="text-xs text-gray-500 leading-relaxed"
+         data-en="Long the exchange with the lowest (most negative) funding and short the one with the highest. Equal notional on both — you're neutral to price."
+         data-es="Ve largo en el exchange con funding más bajo (más negativo) y corto en el más alto. Mismo nocional en ambos — quedas neutral al precio.">
+        Long the exchange with the lowest funding and short the highest. Equal notional — neutral to price.
+      </p>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-green-400 mb-1" data-en="2. Collect the spread" data-es="2. Cobra el spread">2. Collect the spread</h3>
+      <p class="text-xs text-gray-500 leading-relaxed"
+         data-en="Funding pays every 1–8h depending on the exchange. The short receives when funding is positive; the long receives when it's negative. You pocket the difference."
+         data-es="El funding se paga cada 1–8h según el exchange. El corto cobra cuando el funding es positivo; el largo cobra cuando es negativo. Te quedas con la diferencia.">
+        Funding pays every 1–8h. You pocket the difference between the two legs.
+      </p>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-yellow-400 mb-1" data-en="3. Manage margin" data-es="3. Gestiona el margen">3. Manage margin</h3>
+      <p class="text-xs text-gray-500 leading-relaxed"
+         data-en="Keep 2–3x margin buffer above the minimum on both legs so a price move doesn't liquidate one side. Rebalance if positions drift."
+         data-es="Mantén un buffer de margen 2–3x sobre el mínimo en ambas patas para que un movimiento de precio no liquide un lado. Rebalancea si las posiciones se desvían.">
+        Keep 2–3x margin buffer on both legs. Rebalance if positions drift.
+      </p>
+    </div>
+    <div>
+      <h3 class="text-sm font-semibold text-red-400 mb-1" data-en="4. Watch the risks" data-es="4. Cuida los riesgos">4. Watch the risks</h3>
+      <p class="text-xs text-gray-500 leading-relaxed"
+         data-en="Funding flips, fees, and slippage eat into profit. Net APR here is before costs. Confirm rates on the exchange before opening."
+         data-es="Los flips de funding, fees y slippage reducen la ganancia. El APR neto aquí es antes de costos. Confirma las tasas en el exchange antes de abrir.">
+        Funding flips, fees and slippage eat profit. Confirm rates before opening.
+      </p>
+    </div>
+  </div>
+</div>
+
+<section class="mt-4 border-t border-gray-800 pt-6 text-center">
+  <p class="text-gray-600 text-sm max-w-xl mx-auto"
+     data-en="Funding rates are normalized to annualized APR and shown before fees & slippage. Not financial advice — always verify on the exchange."
+     data-es="Las tasas de funding se normalizan a APR anualizado y se muestran antes de fees y slippage. No es asesoría financiera — verifica siempre en el exchange.">
+    Funding rates are normalized to annualized APR, before fees & slippage.
+  </p>
+</section>
+
+</Layout>
+
+<script is:inline>
+const REFRESH_MS = 60000;
+let rows = [], timer = null, autoOn = true, cd = 60;
+let sortKey = 'net', sortDir = -1;
+const $ = id => document.getElementById(id);
+const lang = () => document.documentElement.lang || 'en';
+
+// ─── Status ─────────────────────────────────────────────────────────────
+function setStatus(s) {
+  const t={loading:{en:'Loading…',es:'Cargando…'},live:{en:'Up to date',es:'Actualizado'},error:{en:'Error',es:'Error'}};
+  const c={loading:'bg-yellow-500 animate-pulse',live:'bg-green-500',error:'bg-red-500'};
+  $('status-dot').className=`w-2.5 h-2.5 rounded-full ${c[s]} shrink-0`;
+  $('status-text').textContent=t[s][lang()]||t[s].en;
+}
+
+// ─── Calculator ─────────────────────────────────────────────────────────
+function updateCalc() {
+  const cap=parseFloat($('calc-capital').value)||0;
+  const lev=parseFloat($('calc-lev').value)||0;
+  const apr=parseFloat($('calc-apr').value)||0;
+  const notionalPerLeg = cap*lev/2;
+  const yearly = notionalPerLeg * (apr/100);
+  $('calc-notional').textContent = '$'+notionalPerLeg.toLocaleString(undefined,{maximumFractionDigits:0});
+  $('calc-daily').textContent   = '+$'+(yearly/365).toLocaleString(undefined,{maximumFractionDigits:2});
+  $('calc-monthly').textContent = '+$'+(yearly/12).toLocaleString(undefined,{maximumFractionDigits:2});
+  $('calc-yearly').textContent  = '+$'+yearly.toLocaleString(undefined,{maximumFractionDigits:2});
+}
+
+// ─── Coin normalization ─────────────────────────────────────────────────
+function normCoin(sym) {
+  return sym.replace(/USDT$|USDC$|USD$|-PERP$|PERP$/i,'').replace(/^k/,'k').toUpperCase();
+}
+
+// ─── Sources ────────────────────────────────────────────────────────────
+// Hyperliquid: funding is hourly rate → APR = f*24*365*100
+async function fetchHL() {
+  const r=await fetch('https://api.hyperliquid.xyz/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'metaAndAssetCtxs'})});
+  if(!r.ok) throw new Error('HL '+r.status);
+  const [meta,ctxs]=await r.json();
+  const out={};
+  meta.universe.forEach((u,i)=>{
+    const f=parseFloat(ctxs[i]?.funding);
+    const px=parseFloat(ctxs[i]?.markPx);
+    if(!isNaN(f)) out[normCoin(u.name)]={apr:f*24*365*100, px};
+  });
+  return out;
+}
+// Binance: lastFundingRate per 8h → APR = f*3*365*100
+async function fetchBinance() {
+  const r=await fetch('https://fapi.binance.com/fapi/v1/premiumIndex');
+  if(!r.ok) throw new Error('Binance '+r.status);
+  const data=await r.json();
+  const out={};
+  data.forEach(d=>{
+    if(!/USDT$/.test(d.symbol)) return;
+    const f=parseFloat(d.lastFundingRate);
+    const px=parseFloat(d.markPrice);
+    if(!isNaN(f)) out[normCoin(d.symbol)]={apr:f*3*365*100, px};
+  });
+  return out;
+}
+// Bybit: fundingRate per 8h → APR = f*3*365*100
+async function fetchBybit() {
+  const r=await fetch('https://api.bybit.com/v5/market/tickers?category=linear');
+  if(!r.ok) throw new Error('Bybit '+r.status);
+  const j=await r.json();
+  const out={};
+  (j.result?.list||[]).forEach(d=>{
+    if(!/USDT$/.test(d.symbol)) return;
+    const f=parseFloat(d.fundingRate);
+    const px=parseFloat(d.markPrice||d.lastPrice);
+    if(!isNaN(f)) out[normCoin(d.symbol)]={apr:f*3*365*100, px};
+  });
+  return out;
+}
+
+const EXCHANGES = [
+  {key:'Hyperliquid', short:'HL',      fn:fetchHL,      color:'text-blue-400'},
+  {key:'Binance',     short:'Binance', fn:fetchBinance, color:'text-yellow-400'},
+  {key:'Bybit',       short:'Bybit',   fn:fetchBybit,   color:'text-orange-400'},
+];
+
+// ─── Build rows ─────────────────────────────────────────────────────────
+function buildRows(sources) {
+  const coins={};
+  sources.forEach(({key, data})=>{
+    if(!data) return;
+    for(const coin in data){
+      if(!coins[coin]) coins[coin]={coin, byEx:{}, prices:[]};
+      coins[coin].byEx[key]=data[coin].apr;
+      if(data[coin].px) coins[coin].prices.push(data[coin].px);
+    }
+  });
+  return Object.values(coins).map(c=>{
+    const entries=Object.entries(c.byEx);
+    if(entries.length<2) return null;
+    let maxEx=entries[0], minEx=entries[0];
+    entries.forEach(e=>{ if(e[1]>maxEx[1])maxEx=e; if(e[1]<minEx[1])minEx=e; });
+    const netAPR=maxEx[1]-minEx[1]; // short max, long min
+    const prices=c.prices;
+    let spread=null;
+    if(prices.length>=2){ const mx=Math.max(...prices),mn=Math.min(...prices); spread=((mx-mn)/mn)*100; }
+    return {
+      coin:c.coin,
+      longEx:minEx[0], longApr:minEx[1],
+      shortEx:maxEx[0], shortApr:maxEx[1],
+      netAPR, spread, sources:entries.length, byEx:c.byEx,
+    };
+  }).filter(Boolean);
+}
+
+// ─── Render ─────────────────────────────────────────────────────────────
+function exBadge(name, cls) {
+  return `<span class="text-xs font-semibold px-2 py-0.5 rounded ${cls}">${name}</span>`;
+}
+function colorFor(name){ const e=EXCHANGES.find(x=>x.key===name); return e?e.color:'text-gray-400'; }
+
+function renderTable() {
+  const q=$('search').value.trim().toUpperCase();
+  let show=rows.filter(r=>!q||r.coin.includes(q));
+
+  show.sort((a,b)=>{
+    let av,bv;
+    if(sortKey==='net'){av=a.netAPR;bv=b.netAPR;}
+    else if(sortKey==='spread'){av=a.spread??-1;bv=b.spread??-1;}
+    else {av=a.sources;bv=b.sources;}
+    return (av-bv)*sortDir;
+  });
+
+  $('stat-ops').textContent=rows.length||'0';
+  $('stat-best').textContent=rows.length?('+'+Math.max(...rows.map(r=>r.netAPR)).toFixed(1)+'%'):'—';
+
+  if(!show.length){
+    $('table-body').innerHTML=`<tr><td colspan="6" class="text-center py-16 text-gray-600">${lang()==='es'?'Sin resultados':'No results'}</td></tr>`;
+    return;
+  }
+
+  $('table-body').innerHTML=show.map(r=>`
+    <tr class="border-b border-gray-800/60 hover:bg-gray-800/40 transition-colors">
+      <td class="px-4 py-3 font-bold text-white">${r.coin}</td>
+      <td class="px-3 py-3">
+        <div class="flex items-center justify-center gap-2">
+          <span class="flex items-center gap-1">${exBadge('▲ '+r.longEx,'bg-green-900/40 border border-green-800 text-green-400')}</span>
+          <span class="text-gray-700">/</span>
+          <span class="flex items-center gap-1">${exBadge('▼ '+r.shortEx,'bg-red-900/40 border border-red-800 text-red-400')}</span>
+        </div>
+      </td>
+      <td class="px-3 py-3 text-right font-bold ${r.netAPR>=20?'text-green-300':r.netAPR>=8?'text-green-400':'text-emerald-600'}">+${r.netAPR.toFixed(2)}%</td>
+      <td class="px-3 py-3 text-right font-mono ${r.spread!=null&&r.spread>0.1?'text-yellow-500':'text-gray-500'}">${r.spread!=null?r.spread.toFixed(3)+'%':'—'}</td>
+      <td class="px-4 py-3 text-right text-gray-400">${r.sources}</td>
+      <td class="px-4 py-3 text-right">
+        <button class="use-calc text-xs text-blue-500 hover:text-blue-300 transition-colors" data-apr="${r.netAPR.toFixed(2)}"
+                data-en="Use in calc →" data-es="Usar en calc →">Use in calc →</button>
+      </td>
+    </tr>`).join('');
+
+  document.querySelectorAll('.use-calc').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      $('calc-apr').value=btn.dataset.apr;
+      updateCalc();
+      $('calc-toggle').scrollIntoView({behavior:'smooth',block:'center'});
+    });
+    btn.textContent=lang()==='es'?btn.dataset.es:btn.dataset.en;
+  });
+  updateSortArrows();
+}
+
+function updateSortArrows() {
+  document.querySelectorAll('.sort-arrow').forEach(el=>{
+    el.textContent = el.dataset.key===sortKey ? (sortDir<0?'▼':'▲') : '';
+  });
+}
+
+// ─── Load ───────────────────────────────────────────────────────────────
+async function load() {
+  setStatus('loading');
+  $('refresh-icon').style.animation='spin 0.8s linear infinite';
+  const results=await Promise.allSettled(EXCHANGES.map(e=>e.fn()));
+  const sources=results.map((res,i)=>({key:EXCHANGES[i].key, data:res.status==='fulfilled'?res.value:null}));
+  const live=sources.filter(s=>s.data).length;
+  $('stat-sources').textContent=`${live}/${EXCHANGES.length}`;
+  rows=buildRows(sources);
+  renderTable();
+  setStatus(live===0?'error':'live');
+  $('refresh-icon').style.animation='';
+}
+
+// ─── Auto-refresh ───────────────────────────────────────────────────────
+function startCountdown(){ clearInterval(timer);cd=60;$('stat-refresh').textContent='60s';
+  timer=setInterval(()=>{cd--;$('stat-refresh').textContent=`${cd}s`;if(cd<=0){cd=60;load();}},1000); }
+function stopCountdown(){ clearInterval(timer);$('stat-refresh').textContent='OFF'; }
+
+$('autorefresh-toggle').addEventListener('click',()=>{
+  autoOn=!autoOn;$('autorefresh-toggle').classList.toggle('opacity-40',!autoOn);
+  autoOn?startCountdown():stopCountdown();
+});
+$('calc-toggle').addEventListener('click',()=>{
+  $('calc-body').classList.toggle('hidden');
+  $('calc-chevron').textContent=$('calc-body').classList.contains('hidden')?'▼':'▲';
+});
+['calc-capital','calc-lev','calc-apr'].forEach(id=>$(id).addEventListener('input',updateCalc));
+$('search').addEventListener('input',renderTable);
+$('refresh-btn').addEventListener('click',()=>{if(autoOn)startCountdown();load();});
+document.querySelectorAll('.sortable').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const k=th.dataset.sort;
+    if(sortKey===k) sortDir*=-1; else {sortKey=k;sortDir=-1;}
+    renderTable();
+  });
+});
+
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
+
+updateCalc();
+load();
+startCountdown();
+</script>
