@@ -278,11 +278,17 @@ async function fetchHL(){
   return {ex:'Hyperliquid',data:out};
 }
 async function fetchLighter(){
-  const r=await fetch('https://mainnet.zklighter.elliot.ai/api/v1/funding-rates');
-  if(!r.ok) throw 0; const j=await r.json(); const out={};
+  const [fr,od]=await Promise.all([
+    fetch('https://mainnet.zklighter.elliot.ai/api/v1/funding-rates').then(r=>{if(!r.ok)throw 0;return r.json();}),
+    fetch('https://mainnet.zklighter.elliot.ai/api/v1/orderBookDetails').then(r=>r.ok?r.json():{order_book_details:[]}).catch(()=>({order_book_details:[]})),
+  ]);
+  const info={};
+  (od.order_book_details||[]).forEach(d=>{ const p=parseFloat(d.mark_price); const oi=parseFloat(d.open_interest);
+    info[normCoin(d.symbol)]={px:isNaN(p)?null:p, oiUsd:(!isNaN(oi)&&!isNaN(p))?oi*p:null, volUsd:parseFloat(d.daily_quote_token_volume)||null}; });
+  const out={};
   // Lighter's funding-rates endpoint normalizes every venue to an 8h rate → APR = f*3*365
-  (j.funding_rates||[]).forEach(x=>{ if(x.exchange!=='lighter') return; const f=parseFloat(x.rate);
-    if(!isNaN(f)) out[normCoin(x.symbol)]={apr:f*3*365*100,px:null,oiUsd:null,volUsd:null}; });
+  (fr.funding_rates||[]).forEach(x=>{ if(x.exchange!=='lighter') return; const f=parseFloat(x.rate); if(isNaN(f)) return;
+    const i=info[normCoin(x.symbol)]||{}; out[normCoin(x.symbol)]={apr:f*3*365*100,px:i.px??null,oiUsd:i.oiUsd??null,volUsd:i.volUsd??null}; });
   return {ex:'Lighter',data:out};
 }
 async function fetchPacifica(){
