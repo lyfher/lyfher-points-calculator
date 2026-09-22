@@ -116,6 +116,9 @@ import Layout from '../layouts/Layout.astro';
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="net">
             <span data-en="Net APR" data-es="APR Neto">Net APR</span> <span class="sort-arrow" data-key="net"></span>
           </th>
+          <th class="text-right px-3 py-3" title="Average net APR over the last 7 days from hourly snapshots — shows how well the spread holds. Dot = consistency.">
+            <span data-en="7d Avg" data-es="Prom 7d">7d Avg</span>
+          </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span> <span class="sort-arrow" data-key="spread"></span>
           </th>
@@ -125,7 +128,7 @@ import Layout from '../layouts/Layout.astro';
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="5" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
+        <tr><td colspan="6" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
       </tbody>
     </table>
   </div>
@@ -201,7 +204,8 @@ import Layout from '../layouts/Layout.astro';
 
 <script is:inline>
 const REFRESH_SEC = 10;
-let rows = [], timer = null, autoOn = true, cd = REFRESH_SEC, view = 'table';
+let rows = [], timer = null, autoOn = true, cd = REFRESH_SEC, view = 'table', hist = {};
+const openDetails = new Set();   // coins whose detail panel is expanded (persist across refresh)
 let sortKey = 'net', sortDir = -1;
 let enabledEx = null;   // Set of enabled exchange keys (null = all until built)
 const $ = id => document.getElementById(id);
@@ -334,6 +338,14 @@ function badge(ex,dir){
   return `<span class="text-xs font-semibold px-2 py-0.5 rounded border" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${arrow} ${m.short}</span>`;
 }
 function netColor(v){ return v>=30?'text-green-300':v>=12?'text-green-400':v>=5?'text-emerald-500':'text-gray-500'; }
+function histStats(coin){
+  const pts=hist[coin]||[]; if(pts.length<2) return null;
+  const now=Date.now(), vals=a=>a.map(p=>p[1]), mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+  const d1=vals(pts.filter(p=>p[0]>=now-864e5)), d7=vals(pts);
+  const avg7=mean(d7), sd=Math.sqrt(mean(d7.map(x=>(x-avg7)**2)));
+  const cv=Math.abs(avg7)>1?sd/Math.abs(avg7):9;              // coefficient of variation
+  return {avg24:d1.length?mean(d1):null, avg7, cons:cv<0.3?'high':cv<0.7?'med':'low', n:pts.length};
+}
 
 function passFilters(r){
   const md=parseFloat($('min-depth').value)||0;
@@ -364,7 +376,7 @@ function scoreRow(r){
   const daysToRecover=r.netAPR>0?entryCost/(r.netAPR/365):999;
   return r.netAPR - daysToRecover*2;
 }
-function openBtn(l){ const m=EX[l.ex]||{}; return m.ref?`<a href="${m.ref}" target="_blank" rel="noopener noreferrer" class="inline-block px-2.5 py-1 rounded-lg border text-xs font-semibold" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${T('Open','Abrir')} ${m.short} ↗</a>`:''; }
+function openBtn(l){ const m=EX[l.ex]||{}; return m.ref?`<a href="${m.ref}" target="_blank" rel="noopener noreferrer" class="text-center px-3 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${T('Open','Abrir')} ${m.short} ↗</a>`:''; }
 function renderTop(list){
   const box=$('top-pick');
   if(!list.length){ box.classList.add('hidden'); box.innerHTML=''; return; }
@@ -380,17 +392,21 @@ function renderTop(list){
       : T('Best funding after entry cost & depth.','Mejor funding tras costo de entrada y profundidad.'));
   const btns=[openBtn(r.long),openBtn(r.short)].filter(Boolean).join(' ');
   box.innerHTML=`
-    <div id="top-card" class="rounded-2xl p-4 border border-green-500/40 bg-green-500/5 cursor-help" style="box-shadow:0 0 24px rgba(34,197,94,0.10)">
-      <div class="flex items-center flex-wrap gap-x-4 gap-y-2">
-        <span class="text-xs font-bold uppercase tracking-widest text-green-400">🔥 ${T('Top pick','Top del momento')}</span>
-        <span class="text-lg font-bold text-white">${r.coin}</span>
-        <span class="flex items-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</span>
-        <span class="text-lg font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}% <span class="text-xs font-medium text-gray-500">APR</span></span>
-        <span class="text-sm">${T('spread','spread')} <span class="font-mono ${spCls}">${spTxt}</span></span>
-        <span class="text-sm text-gray-400">${T('depth','profundidad')} <span class="font-mono">${fmtMoney(r.depth)}</span></span>
-        ${btns?`<span class="ml-auto flex gap-2">${btns}</span>`:''}
+    <div id="top-card" class="rounded-2xl p-4 border border-green-500/40 bg-green-500/5 cursor-help flex flex-col sm:flex-row sm:items-center gap-4" style="box-shadow:0 0 24px rgba(34,197,94,0.10)">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center flex-wrap gap-x-3 gap-y-1.5 mb-2">
+          <span class="text-xs font-bold uppercase tracking-widest text-green-400">🔥 ${T('Top pick','Top del momento')}</span>
+          <span class="text-lg font-bold text-white">${r.coin}</span>
+          <span class="flex items-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</span>
+        </div>
+        <div class="flex items-baseline flex-wrap gap-x-4 gap-y-1">
+          <span class="text-2xl font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%<span class="text-xs font-medium text-gray-500 ml-1">APR</span></span>
+          <span class="text-sm text-gray-400">${T('spread','spread')} <span class="font-mono ${spCls}">${spTxt}</span></span>
+          <span class="text-sm text-gray-400">${T('depth','profundidad')} <span class="font-mono text-gray-200">${fmtMoney(r.depth)}</span></span>
+        </div>
+        <div class="text-sm text-gray-400 mt-2">${why}</div>
       </div>
-      <div class="text-sm text-gray-400 mt-2">${why}</div>
+      ${btns?`<div class="flex sm:flex-col gap-2 shrink-0">${btns}</div>`:''}
     </div>`;
   box.classList.remove('hidden');
   const tip=$('tip'), card=$('top-card');
@@ -411,7 +427,7 @@ function renderTable(){
   updateStats(show);
 
   if(!show.length){
-    $('table-body').innerHTML=`<tr><td colspan="5" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
+    $('table-body').innerHTML=`<tr><td colspan="6" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
     return;
   }
 
@@ -426,10 +442,14 @@ function renderTable(){
         <div class="flex items-center justify-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</div>
       </td>
       <td class="px-3 py-3 text-right font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%</td>
+      ${(() => { const h=histStats(r.coin); if(!h) return `<td class="px-3 py-3 text-right text-gray-600" title="${T('Collecting history…','Recolectando historial…')}">—</td>`;
+        const dot=h.cons==='high'?'#22c55e':h.cons==='med'?'#eab308':'#ef4444';
+        const tt=`${T('consistency','consistencia')}: ${h.cons} · ${h.n} ${T('samples','muestras')}`;
+        return `<td class="px-3 py-3 text-right font-mono whitespace-nowrap"><span class="text-gray-200">${h.avg7>=0?'+':''}${h.avg7.toFixed(0)}%</span> <span class="inline-block w-2 h-2 rounded-full align-middle ml-0.5" style="background:${dot}" title="${tt}"></span></td>`; })()}
       <td class="px-3 py-3 text-right font-mono ${spreadCls}">${spreadTxt}</td>
       <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-200'}">${fmtMoney(r.depth)}</td>
     </tr>
-    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="5" class="px-4 py-3"></td></tr>`;
+    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="6" class="px-4 py-3"></td></tr>`;
   }).join('');
 
   bindRows();
@@ -479,6 +499,14 @@ function buildDetail(r){
       const b=[btn(r.long),btn(r.short)].filter(Boolean).join(' '); return b?`<div class="mt-2 flex gap-2">${b}</div>`:''; })()}
     ${(depthWarn?`<div class="mt-2 text-red-400">⚠ ${T('Thin market ('+fmtMoney(r.depth)+' OI) — hard to size in, slippage is high.','Mercado fino ('+fmtMoney(r.depth)+' OI) — difícil entrar, slippage alto.')}</div>`:'')}
     ${tradeMath(r)}
+    ${(() => { const h=histStats(r.coin);
+      if(!h) return `<div class="mt-2 pt-2 border-t border-gray-800 text-gray-500">${T('Net APR history: collecting — needs ~a day of snapshots.','Historial de APR neto: recolectando — necesita ~un día de snapshots.')}</div>`;
+      const lbl={high:T('High','Alta'),med:T('Medium','Media'),low:T('Low','Baja')}[h.cons];
+      const col={high:'text-green-400',med:'text-yellow-400',low:'text-red-400'}[h.cons];
+      return `<div class="mt-2 pt-2 border-t border-gray-800">
+        <div class="text-gray-500 mb-1">${T('Net APR history (all DEXs)','Historial de APR neto (todos los DEXs)')}</div>
+        <div>24h: <span class="font-mono text-gray-200">${h.avg24!=null?(h.avg24>=0?'+':'')+h.avg24.toFixed(1)+'%':'—'}</span> · 7d: <span class="font-mono text-gray-200">${h.avg7>=0?'+':''}${h.avg7.toFixed(1)}%</span> · ${T('consistency','consistencia')}: <span class="${col} font-semibold">${lbl}</span> <span class="text-gray-600">(${h.n} ${T('samples','muestras')})</span></div>
+      </div>`; })()}
   </div>`;
 }
 
@@ -507,9 +535,11 @@ function bindRows(){
     tr.addEventListener('mouseleave',()=>tip.classList.add('hidden'));
     tr.addEventListener('click',()=>{
       const d=document.querySelector(`.detail[data-d="${i}"]`);
-      if(d.classList.contains('hidden')){ d.querySelector('td').innerHTML=buildDetail(r); d.classList.remove('hidden'); }
-      else d.classList.add('hidden');
+      if(d.classList.contains('hidden')){ d.querySelector('td').innerHTML=buildDetail(r); d.classList.remove('hidden'); openDetails.add(r.coin); }
+      else { d.classList.add('hidden'); openDetails.delete(r.coin); }
     });
+    // keep expanded panels open across auto-refresh, just refreshing their content
+    if(openDetails.has(r.coin)){ const d=document.querySelector(`.detail[data-d="${i}"]`); d.querySelector('td').innerHTML=buildDetail(r); d.classList.remove('hidden'); }
   });
 }
 
@@ -601,6 +631,7 @@ async function load(){
   settled.forEach(s=>{ if(s.status!=='fulfilled') return; Array.isArray(s.value)?sources.push(...s.value):sources.push(s.value); });
   const live=sources.filter(s=>s.data&&Object.keys(s.data).length).length;
   $('stat-sources').textContent=`${live}/${Object.keys(EX).length}`;
+  try{ const hr=await fetch('/history.json',{cache:'no-store'}); if(hr.ok){ hist=(await hr.json()).points||{}; } }catch{}
   rows=buildRows(sources);
   render();
   setStatus(live===0?'error':'live');
