@@ -75,13 +75,13 @@ async function fetchTxflow() {
       if (!r.ok) throw new Error("txflow ctx " + r.status);
       const c = await j(r);
       const n = c.nodeCtx || {};
-      const f = num(n.funding);            // hourly rate
+      const f = num(n.funding);            // hourly rate, ALREADY in percent (e.g. 0.00125 = 0.00125%/h)
       const px = num(n.markPx || n.oraclePx);
       if (f == null || px == null) return null;
       const oi = num(n.openInterest);      // base units
       return {
         coin: base,
-        apr: f * 24 * 365 * 100,
+        apr: f * 24 * 365,                 // percent already → no extra *100
         px,
         oiUsd: oi != null ? oi * px : null,
         volUsd: num(c.dayNtlVlm),
