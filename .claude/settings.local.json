@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "WebSearch",
-      "WebFetch(domain:algora.io)",
-      "WebFetch(domain:www.figma.com)"
-    ]
-  }
-}
