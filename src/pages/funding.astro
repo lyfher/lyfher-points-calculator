@@ -187,6 +187,7 @@ const T = (en, es) => lang() === 'es' ? es : en;
 const EX = {
   Hyperliquid:{ short:'Hyperliquid', color:'#60a5fa', tier:'A', interval:'1h', ref:'' },
   Lighter:    { short:'Lighter',     color:'#a3e635', tier:'A', interval:'1h', ref:'' },
+  LighterRH:  { short:'Lighter RH',  color:'#84cc16', tier:'A', interval:'1h', ref:'' },
   Extended:   { short:'Extended',    color:'#34d399', tier:'B', interval:'1h', ref:'https://app.extended.exchange/join/LYFHER' },
   Pacifica:   { short:'Pacifica',    color:'#22d3ee', tier:'B', interval:'1h', ref:'https://app.pacifica.fi?referral=Lyfher' },
   Variational:{ short:'Variational', color:'#a78bfa', tier:'B', interval:'1h', ref:'' },
@@ -223,20 +224,24 @@ async function fetchHL(){
     if(!isNaN(f)) out[normCoin(u.name)]={apr:f*24*365*100,px,oiUsd:parseFloat(c.openInterest)*px||null,volUsd:parseFloat(c.dayNtlVlm)||null}; });
   return {ex:'Hyperliquid',data:out};
 }
-async function fetchLighter(){
+// Lighter has two independent deployments (separate liquidity/funding):
+// normal mainnet, and the Robinhood Chain instance (api.rh.lighter.xyz).
+async function fetchLighterHost(host, exName){
   const [fr,od]=await Promise.all([
-    fetch('https://mainnet.zklighter.elliot.ai/api/v1/funding-rates').then(r=>{if(!r.ok)throw 0;return r.json();}),
-    fetch('https://mainnet.zklighter.elliot.ai/api/v1/orderBookDetails').then(r=>r.ok?r.json():{order_book_details:[]}).catch(()=>({order_book_details:[]})),
+    fetch(host+'/api/v1/funding-rates').then(r=>{if(!r.ok)throw 0;return r.json();}),
+    fetch(host+'/api/v1/orderBookDetails').then(r=>r.ok?r.json():{order_book_details:[]}).catch(()=>({order_book_details:[]})),
   ]);
   const info={};
   (od.order_book_details||[]).forEach(d=>{ const p=parseFloat(d.mark_price); const oi=parseFloat(d.open_interest);
     info[normCoin(d.symbol)]={px:isNaN(p)?null:p, oiUsd:(!isNaN(oi)&&!isNaN(p))?oi*p:null, volUsd:parseFloat(d.daily_quote_token_volume)||null}; });
   const out={};
-  // Lighter's funding-rates endpoint normalizes every venue to an 8h rate → APR = f*3*365
+  // funding-rates normalizes every venue to an 8h rate → APR = f*3*365
   (fr.funding_rates||[]).forEach(x=>{ if(x.exchange!=='lighter') return; const f=parseFloat(x.rate); if(isNaN(f)) return;
     const i=info[normCoin(x.symbol)]||{}; out[normCoin(x.symbol)]={apr:f*3*365*100,px:i.px??null,oiUsd:i.oiUsd??null,volUsd:i.volUsd??null}; });
-  return {ex:'Lighter',data:out};
+  return {ex:exName,data:out};
 }
+const fetchLighter   = () => fetchLighterHost('https://mainnet.zklighter.elliot.ai','Lighter');
+const fetchLighterRH = () => fetchLighterHost('https://api.rh.lighter.xyz','LighterRH');
 async function fetchPacifica(){
   const r=await fetch('https://api.pacifica.fi/api/v1/info/prices');
   if(!r.ok) throw 0; const j=await r.json(); const out={};
@@ -271,7 +276,7 @@ async function fetchProxy(){
   return res;
 }
 
-const CLIENT=[fetchHL,fetchLighter,fetchPacifica,fetchVariational,fetchArcus];
+const CLIENT=[fetchHL,fetchLighter,fetchLighterRH,fetchPacifica,fetchVariational,fetchArcus];
 
 // ─── Build rows ─────────────────────────────────────────────────────────
 function buildRows(sources){
