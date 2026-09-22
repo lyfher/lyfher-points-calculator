@@ -37,48 +37,6 @@ import Layout from '../layouts/Layout.astro';
   </div>
 </div>
 
-<!-- Delta-neutral calculator -->
-<div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 mb-6">
-  <div id="calc-toggle" class="flex items-center justify-between cursor-pointer select-none">
-    <span class="text-sm font-semibold text-white">
-      💰 <span data-en="Delta-Neutral Calculator" data-es="Calculadora Delta-Neutral">Delta-Neutral Calculator</span>
-    </span>
-    <span id="calc-chevron" class="text-gray-500 text-sm">▼</span>
-  </div>
-  <div id="calc-body" class="mt-4">
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-      <div>
-        <label class="block text-xs text-gray-500 mb-1" data-en="Capital ($)" data-es="Capital ($)">Capital ($)</label>
-        <input id="calc-capital" type="number" value="1000" min="1"
-               class="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"/>
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1" data-en="Leverage (x)" data-es="Apalancamiento (x)">Leverage (x)</label>
-        <input id="calc-lev" type="number" value="3" min="1" max="20" step="0.5"
-               class="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"/>
-      </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1" data-en="Net funding APR (%)" data-es="APR neto de funding (%)">Net funding APR (%)</label>
-        <input id="calc-apr" type="number" value="20" step="0.1"
-               class="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"/>
-      </div>
-    </div>
-    <div id="calc-result" class="mt-4 bg-gray-950 border border-green-800 rounded-xl p-4">
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-        <div><div class="text-xs text-gray-500 mb-1" data-en="Notional / leg" data-es="Nocional / pata">Notional / leg</div><div id="calc-notional" class="text-lg font-bold text-white">—</div></div>
-        <div><div class="text-xs text-gray-500 mb-1" data-en="Daily" data-es="Diario">Daily</div><div id="calc-daily" class="text-lg font-bold text-green-400">—</div></div>
-        <div><div class="text-xs text-gray-500 mb-1" data-en="Monthly" data-es="Mensual">Monthly</div><div id="calc-monthly" class="text-lg font-bold text-green-400">—</div></div>
-        <div><div class="text-xs text-gray-500 mb-1" data-en="Yearly" data-es="Anual">Yearly</div><div id="calc-yearly" class="text-lg font-bold text-green-400">—</div></div>
-      </div>
-      <p class="text-xs text-gray-600 mt-3 text-center"
-         data-en="Estimate before fees & slippage. Notional per leg = capital × leverage ÷ 2 (split long/short)."
-         data-es="Estimado antes de fees y slippage. Nocional por pata = capital × apalancamiento ÷ 2 (dividido long/short).">
-        Estimate before fees & slippage.
-      </p>
-    </div>
-  </div>
-</div>
-
 <!-- Scanner header -->
 <div class="flex items-center gap-2 mb-3">
   <span class="text-lg">🔬</span>
@@ -256,18 +214,6 @@ function normCoin(sym){
   return sym.replace(/[-_/].*$/,'').replace(/USDT$|USDC$|USD$|PERP$/i,'').toUpperCase();
 }
 
-// ─── Calculator ─────────────────────────────────────────────────────────
-function updateCalc(){
-  const cap=parseFloat($('calc-capital').value)||0;
-  const lev=parseFloat($('calc-lev').value)||0;
-  const apr=parseFloat($('calc-apr').value)||0;
-  const notionalPerLeg=cap*lev/2;
-  const yearly=notionalPerLeg*(apr/100);
-  $('calc-notional').textContent='$'+notionalPerLeg.toLocaleString(undefined,{maximumFractionDigits:0});
-  $('calc-daily').textContent  ='+$'+(yearly/365).toLocaleString(undefined,{maximumFractionDigits:2});
-  $('calc-monthly').textContent='+$'+(yearly/12).toLocaleString(undefined,{maximumFractionDigits:2});
-  $('calc-yearly').textContent ='+$'+yearly.toLocaleString(undefined,{maximumFractionDigits:2});
-}
 
 // ─── Sources (client, CORS-open) ────────────────────────────────────────
 async function fetchHL(){
@@ -432,7 +378,6 @@ function buildDetail(r){
     </div>
     ${(depthWarn?`<div class="mt-1 text-red-400">⚠ ${T('Thin market ('+fmtMoney(r.depth)+' OI) — funding may not hold and slippage is high.','Mercado fino ('+fmtMoney(r.depth)+' OI) — el funding puede no sostenerse y el slippage es alto.')}</div>`:'')}
     ${(newLeg?`<div class="mt-1 text-yellow-500">⚠ ${T('Involves a newer exchange — higher counterparty risk.','Involucra un exchange nuevo — mayor riesgo de contraparte.')}</div>`:'')}
-    <button class="use-calc mt-2 text-blue-400 hover:text-blue-300" data-apr="${r.netAPR.toFixed(2)}">${T('Use in calculator →','Usar en calculadora →')}</button>
   </div>`;
 }
 
@@ -457,9 +402,8 @@ function bindRows(){
     tr.addEventListener('mouseleave',()=>tip.classList.add('hidden'));
     tr.addEventListener('click',()=>{
       const d=document.querySelector(`.detail[data-d="${i}"]`);
-      if(d.classList.contains('hidden')){ d.querySelector('td').innerHTML=buildDetail(r); d.classList.remove('hidden');
-        d.querySelector('.use-calc').addEventListener('click',ev=>{ ev.stopPropagation(); $('calc-apr').value=r.netAPR.toFixed(2); updateCalc(); $('calc-toggle').scrollIntoView({behavior:'smooth',block:'center'}); });
-      } else d.classList.add('hidden');
+      if(d.classList.contains('hidden')){ d.querySelector('td').innerHTML=buildDetail(r); d.classList.remove('hidden'); }
+      else d.classList.add('hidden');
     });
   });
 }
@@ -500,8 +444,6 @@ function startCountdown(){ clearInterval(timer);cd=60;$('stat-refresh').textCont
 function stopCountdown(){ clearInterval(timer);$('stat-refresh').textContent='OFF'; }
 
 $('autorefresh-toggle').addEventListener('click',()=>{ autoOn=!autoOn;$('autorefresh-toggle').classList.toggle('opacity-40',!autoOn); autoOn?startCountdown():stopCountdown(); });
-$('calc-toggle').addEventListener('click',()=>{ $('calc-body').classList.toggle('hidden'); $('calc-chevron').textContent=$('calc-body').classList.contains('hidden')?'▼':'▲'; });
-['calc-capital','calc-lev','calc-apr'].forEach(id=>$(id).addEventListener('input',updateCalc));
 $('search').addEventListener('input',renderTable);
 $('min-depth').addEventListener('change',renderTable);
 $('max-spread').addEventListener('change',renderTable);
@@ -513,5 +455,5 @@ document.querySelectorAll('.sortable').forEach(th=>th.addEventListener('click',(
 
 document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
 enabledEx=new Set(Object.keys(EX)); renderDexChips();
-updateCalc(); load(); startCountdown();
+load(); startCountdown();
 </script>
