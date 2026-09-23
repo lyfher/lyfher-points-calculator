@@ -2,3 +2,5 @@
 canal-ia-brainrot/
 node_modules/
 dist/
+
+.astro/
