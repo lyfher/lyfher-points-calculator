@@ -107,6 +107,7 @@ import Layout from '../layouts/Layout.astro';
       <option value="100">100%</option>
       <option value="200">200%</option>
     </select>
+    <span id="alert-count" class="text-xs text-green-400 font-semibold whitespace-nowrap"></span>
     <button id="refresh-btn" class="flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-green-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">
       <span id="refresh-icon" class="inline-block">↻</span>
       <span data-en="Refresh" data-es="Actualizar">Refresh</span>
@@ -211,6 +212,9 @@ import Layout from '../layouts/Layout.astro';
 
 <!-- Tooltip -->
 <div id="tip" class="hidden fixed z-[100] max-w-xs bg-gray-950 border border-gray-700 rounded-xl p-3 text-xs text-gray-300 shadow-2xl pointer-events-none leading-relaxed"></div>
+
+<!-- Alert toasts -->
+<div id="toasts" class="fixed bottom-4 right-4 z-[120] flex flex-col gap-2 items-end"></div>
 
 </Layout>
 
@@ -391,7 +395,7 @@ function updateStats(show){
   $('stat-ops').textContent=show.length||'0';
   $('stat-best').textContent=show.length?('+'+Math.max(...show.map(r=>r.netAPR)).toFixed(1)+'%'):'—';
 }
-function render(){ const f=getFiltered(); renderTop(f); view==='heat'?renderHeat():renderTable(); }
+function render(){ const f=getFiltered(); renderTop(f); view==='heat'?renderHeat():renderTable(); updateAlertCount(); }
 
 // Score an opportunity: high APR, cheap entry (negative spread = free), penalize slow recovery
 function scoreRow(r){
@@ -588,6 +592,20 @@ function alertCandidates(){
   // opportunities passing current filters (depth/spread/dex) above the alert APR
   return getFiltered().filter(r=>r.netAPR>=alertThr).map(r=>r.coin);
 }
+function updateAlertCount(){
+  const el=$('alert-count'); if(!el) return;
+  el.textContent = alertThr ? `${alertCandidates().length} ${T('live','activas')}` : '';
+}
+function toast(html){
+  const box=$('toasts'); if(!box) return;
+  const el=document.createElement('div');
+  el.className='cursor-pointer bg-gray-900 border border-green-500/50 rounded-xl px-4 py-3 text-sm text-white max-w-xs';
+  el.style.cssText='box-shadow:0 0 24px rgba(34,197,94,0.22);animation:slidein .25s ease';
+  el.innerHTML=html;
+  el.addEventListener('click',()=>el.remove());
+  box.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .4s,transform .4s'; el.style.opacity='0'; el.style.transform='translateX(20px)'; setTimeout(()=>el.remove(),400); }, 7000);
+}
 function primeAlerts(){ prevAlerted=new Set(alertThr?alertCandidates():[]); }
 function checkAlerts(){
   if(!alertThr){ prevAlerted.clear(); return; }
@@ -596,9 +614,15 @@ function checkAlerts(){
   prevAlerted=curSet;
   if(!fresh.length) return;
   beep();
+  const rows=window._show||[]; const legs=c=>{const r=rows.find(x=>x.coin===c); return r?`${(EX[r.long.ex]||{}).short}/${(EX[r.short.ex]||{}).short}`:'';};
+  const apr=c=>{const r=rows.find(x=>x.coin===c); return r?'+'+r.netAPR.toFixed(0)+'%':'';};
+  // in-page toast (works even if OS notifications are blocked)
+  const items=fresh.slice(0,4).map(c=>`<div class="flex items-center gap-2"><span class="text-green-400">🔥</span> <b>${c}</b> <span class="text-green-400 font-semibold">${apr(c)}</span> <span class="text-gray-500 text-xs">${legs(c)}</span></div>`).join('');
+  const more=fresh.length>4?`<div class="text-gray-500 text-xs mt-1">+${fresh.length-4} ${T('more','más')}</div>`:'';
+  toast(`<div class="font-semibold text-green-400 mb-1">🔔 ${T('New opportunity','Nueva oportunidad')}${fresh.length>1?' ('+fresh.length+')':''}</div>${items}${more}`);
+  // OS notification if allowed
   if('Notification' in window && Notification.permission==='granted'){
-    const rows=window._show||[]; const info=c=>{const r=rows.find(x=>x.coin===c); return r?`${c} +${r.netAPR.toFixed(0)}%`:c;};
-    const body=fresh.slice(0,5).map(info).join(', ')+(fresh.length>5?` +${fresh.length-5}`:'');
+    const body=fresh.slice(0,5).map(c=>`${c} ${apr(c)}`).join(', ')+(fresh.length>5?` +${fresh.length-5}`:'');
     try{ new Notification('Lyfher — '+T('new opportunity','nueva oportunidad'), {body, icon:'/favicon.svg'}); }catch{}
   }
 }
@@ -735,10 +759,11 @@ $('alert-apr').addEventListener('change',e=>{
     try{ beep(); }catch{}          // unlock audio on user gesture + confirm it works
     primeAlerts(); window._alertsReady=true;
   }else{ prevAlerted.clear(); window._alertsReady=false; }
+  updateAlertCount();
 });
 document.querySelectorAll('.sortable').forEach(th=>th.addEventListener('click',()=>{ const k=th.dataset.sort; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=-1;} renderTable(); }));
 
-document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}.help{margin-left:3px;color:#6b7280;cursor:help;font-weight:400}.help:hover{color:#d1d5db}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}@keyframes slidein{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}.help{margin-left:3px;color:#6b7280;cursor:help;font-weight:400}.help:hover{color:#d1d5db}</style>');
 enabledEx=new Set(Object.keys(EX)); renderDexChips(); bindHelp();
 try{ const sv=localStorage.getItem('lyfher_alert_apr'); if(sv&&sv!=='0'){ $('alert-apr').value=sv; alertThr=parseFloat(sv)||0; $('alert-label').classList.add('text-green-400'); $('alert-label').classList.remove('text-gray-500'); } }catch{}
 load(); startCountdown();
