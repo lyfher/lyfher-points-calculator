@@ -238,11 +238,11 @@ const EX = {
   LighterRH:  { short:'Lighter RH',  color:'#84cc16', tier:'A', interval:'1h', ref:'https://robinhoodchain.lighter.xyz/?referral=23169FPC&source=none', trade:'https://robinhoodchain.lighter.xyz/trade/{c}?referral=23169FPC' },
   Extended:   { short:'Extended',    color:'#34d399', tier:'B', interval:'1h', ref:'https://app.extended.exchange/join/LYFHER' },
   Pacifica:   { short:'Pacifica',    color:'#22d3ee', tier:'B', interval:'1h', ref:'https://app.pacifica.fi?referral=Lyfher', trade:'https://app.pacifica.fi/trade/{c}?referral=Lyfher' },
-  Variational:{ short:'Variational', color:'#a78bfa', tier:'B', interval:'1h', ref:'https://omni.variational.io/?ref=OMNIMDZYKINU' },
+  Variational:{ short:'Variational', color:'#a78bfa', tier:'B', interval:'1h', ref:'https://omni.variational.io/?ref=OMNIMDZYKINU', trade:'https://omni.variational.io/swap/{c}?ref=OMNIMDZYKINU' },
   Arcus:      { short:'Arcus',       color:'#f472b6', tier:'C', interval:'1h', ref:'https://waitlist.arcus.xyz/s/LYFHER' },
   RiseX:      { short:'RiseX',       color:'#e879f9', tier:'C', interval:'8h', ref:'https://www.rise.trade/invite/lyfher' },
   TxFlow:     { short:'TxFlow',      color:'#4ade80', tier:'C', interval:'1h', ref:'https://app.txflow.com/r/TXLYFHER' },
-  Aster:      { short:'Aster',       color:'#f59e0b', tier:'B', interval:'8h', ref:'' },
+  Aster:      { short:'Aster',       color:'#f59e0b', tier:'B', interval:'8h', ref:'', trade:'https://www.asterdex.com/en/trade/pro/futures/{c}USDT' },
   Paradex:    { short:'Paradex',     color:'#fb7185', tier:'B', interval:'8h', ref:'', trade:'https://app.paradex.trade/futures/{c}-USD-PERP/summary' },
 };
 const isEst = name => EX[name] && EX[name].tier === 'A';
