@@ -13,19 +13,4 @@ export interface Tool {
   calculatorSlug?: string; // links to /{slug} calculator page
 }
 
-export const tools: Tool[] = [
-  {
-    name: "TreadFi",
-    description: "Automate your perpetuals volume to farm more points efficiently. The best bot for perp farming.",
-    descriptionEs: "Automatiza tu volumen en perpetuos para farmear más puntos eficientemente. El mejor bot para farming de perps.",
-    logoEmoji: "🤖",
-    logoSrc: "/logos/treadfi logo.png",
-    accentHex: "#3B82F6",
-    referralLink: "https://app.tread.fi/referral/PODO5ZYR",
-    referralBenefit: "20% discount on subscription",
-    referralBenefitEs: "20% de descuento en la suscripción",
-    tag: "Volume Bot",
-    tagEs: "Bot de Volumen",
-    calculatorSlug: "treadfi",
-  },
-];
+export const tools: Tool[] = [];

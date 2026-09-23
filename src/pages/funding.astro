@@ -114,17 +114,16 @@ import Layout from '../layouts/Layout.astro';
           <th class="text-left px-4 py-3" data-en="Symbol" data-es="Símbolo">Symbol</th>
           <th class="text-center px-3 py-3" data-en="Best Pair (Long / Short)" data-es="Mejor Par (Long / Short)">Best Pair (Long / Short)</th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="net">
-            <span data-en="Net APR" data-es="APR Neto">Net APR</span> <span class="sort-arrow" data-key="net"></span>
+            <span data-en="Net APR" data-es="APR Neto">Net APR</span><span class="help" data-tip-en="Net APR = the funding spread you capture right now: short's APR minus long's APR. This is your yield if funding holds." data-tip-es="APR Neto = el spread de funding que capturas ahora: APR del corto menos APR del largo. Es tu rendimiento si el funding se mantiene.">ⓘ</span> <span class="sort-arrow" data-key="net"></span>
           </th>
-          <th class="text-right px-3 py-3" title="Average net APR over the last 7 days from hourly snapshots — shows how well the spread holds. Dot = consistency.">
-            <span data-en="7d Avg" data-es="Prom 7d">7d Avg</span>
+          <th class="text-right px-3 py-3">
+            <span data-en="7d Avg" data-es="Prom 7d">7d Avg</span><span class="help" data-tip-en="7d Avg = average Net APR over the last 7 days (hourly snapshots). The dot is CONSISTENCY: 🟢 green = stable/reliable, 🟡 yellow = varies, 🔴 red = very volatile. Needs ~a day of data to matter." data-tip-es="Prom 7d = APR neto promedio de los últimos 7 días (snapshots por hora). El punto es la CONSISTENCIA: 🟢 verde = estable/confiable, 🟡 amarillo = varía, 🔴 rojo = muy volátil. Necesita ~un día de datos para valer.">ⓘ</span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
-            <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span> <span class="sort-arrow" data-key="spread"></span>
+            <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span><span class="help" data-tip-en="Entry Spread = price gap between the two legs when you open. Negative/small (green) = cheap or you get paid to enter; large (red) = costly entry you must recover with funding." data-tip-es="Spread de Entrada = diferencia de precio entre las dos patas al abrir. Negativo/pequeño (verde) = barato o te pagan por entrar; grande (rojo) = entrada cara que debes recuperar con el funding.">ⓘ</span> <span class="sort-arrow" data-key="spread"></span>
           </th>
-          <th class="sortable text-right px-4 py-3 cursor-pointer hover:text-white select-none" data-sort="depth"
-              title="Depth = USD open interest on the thinner leg. How much size the market can absorb before slippage. High = safe to size in; low = juicy funding but a trap.">
-            <span data-en="Depth" data-es="Profundidad">Depth</span> <span class="text-gray-600 font-normal">ⓘ</span> <span class="sort-arrow" data-key="depth"></span>
+          <th class="sortable text-right px-4 py-3 cursor-pointer hover:text-white select-none" data-sort="depth">
+            <span data-en="Depth" data-es="Profundidad">Depth</span><span class="help" data-tip-en="Depth = USD open interest on the thinner leg — how much size the market can absorb before slippage. High = safe to size in; low = juicy funding but a trap." data-tip-es="Profundidad = interés abierto en USD de la pata más chica — cuánto tamaño aguanta el mercado antes de slippage. Alta = seguro entrar con tamaño; baja = funding jugoso pero trampa.">ⓘ</span> <span class="sort-arrow" data-key="depth"></span>
           </th>
         </tr>
       </thead>
@@ -546,6 +545,18 @@ function bindRows(){
 
 function updateSortArrows(){ document.querySelectorAll('.sort-arrow').forEach(el=>{ el.textContent=el.dataset.key===sortKey?(sortDir<0?'▼':'▲'):''; }); }
 
+// ⓘ help markers on column headers (hover on desktop, tap on mobile)
+function bindHelp(){
+  const tip=$('tip');
+  document.querySelectorAll('.help').forEach(el=>{
+    const show=()=>{ tip.innerHTML=lang()==='es'?el.dataset.tipEs:el.dataset.tipEn; tip.classList.remove('hidden');
+      const r=el.getBoundingClientRect(); tip.style.left=Math.min(r.left,window.innerWidth-260)+'px'; tip.style.top=(r.bottom+8)+'px'; };
+    el.addEventListener('mouseenter',show);
+    el.addEventListener('mouseleave',()=>tip.classList.add('hidden'));
+    el.addEventListener('click',e=>{ e.stopPropagation(); tip.classList.contains('hidden')?show():tip.classList.add('hidden'); });
+  });
+}
+
 // ─── Heatmap ────────────────────────────────────────────────────────────
 function heatColor(a){
   if(a==null) return 'background:#0b0f1a;color:#374151';
@@ -657,7 +668,7 @@ $('view-table').addEventListener('click',()=>setView('table'));
 $('view-heat').addEventListener('click',()=>setView('heat'));
 document.querySelectorAll('.sortable').forEach(th=>th.addEventListener('click',()=>{ const k=th.dataset.sort; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=-1;} renderTable(); }));
 
-document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
-enabledEx=new Set(Object.keys(EX)); renderDexChips();
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}.help{margin-left:3px;color:#6b7280;cursor:help;font-weight:400}.help:hover{color:#d1d5db}</style>');
+enabledEx=new Set(Object.keys(EX)); renderDexChips(); bindHelp();
 load(); startCountdown();
 </script>
