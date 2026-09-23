@@ -1,12 +1,19 @@
-// Hourly funding snapshot for the consistency score.
+// Hourly funding snapshot for the consistency score + Telegram opportunity alerts.
 // Run by .github/workflows/snapshot.yml. Fetches all DEXs server-side (no CORS),
-// computes each coin's delta-neutral net APR (max−min across venues) and appends
-// it to public/history.json, keeping a rolling 7-day window.
+// computes each coin's delta-neutral net APR (max−min across venues) + depth,
+// appends net APR to public/history.json (rolling 7d), and posts new high-quality
+// opportunities to a Telegram channel (no-op if TELEGRAM_* env vars are absent).
 
 import { readFile, writeFile } from "node:fs/promises";
 
 const WINDOW_MS = 7 * 24 * 3600 * 1000;
 const HIST_PATH = "public/history.json";
+
+// Alert tuning
+const ALERT_MIN_APR = 50;          // net APR % to be worth an alert
+const ALERT_MIN_DEPTH = 1_000_000; // USD OI on the thinner leg — avoid thin traps
+const ALERT_COOLDOWN_MS = 12 * 3600 * 1000; // don't re-alert the same coin within 12h
+const ALERT_MAX = 6;               // max opportunities per message
 
 const num = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
 const j = (r) => r.json();
@@ -18,41 +25,53 @@ const TXFLOW_MAJORS = [
   "HYPE","ENA","JUP","AAVE","UNI","LDO","ONDO","PENDLE","XPL","WLD","FARTCOIN",
 ];
 
-// Each fetcher returns { [coin]: aprPercent }
+// Each fetcher returns { [coin]: { apr, oiUsd } }
 async function fetchHL() {
   const r = await fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "metaAndAssetCtxs" }) });
   const [meta, ctxs] = await j(r); const out = {};
-  meta.universe.forEach((u, i) => { const f = num((ctxs[i] || {}).funding); if (f != null) out[normCoin(u.name)] = f * 24 * 365 * 100; });
+  meta.universe.forEach((u, i) => { const c = ctxs[i] || {}; const f = num(c.funding), px = num(c.markPx), oi = num(c.openInterest);
+    if (f != null) out[normCoin(u.name)] = { apr: f * 24 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchLighterHost(host) {
-  const r = await fetch(host + "/api/v1/funding-rates"); const d = await j(r); const out = {};
-  (d.funding_rates || []).forEach((x) => { if (x.exchange !== "lighter") return; const f = num(x.rate); if (f != null) out[normCoin(x.symbol)] = f * 3 * 365 * 100; });
+  const [fr, od] = await Promise.all([
+    fetch(host + "/api/v1/funding-rates").then(j),
+    fetch(host + "/api/v1/orderBookDetails").then((r) => r.ok ? r.json() : { order_book_details: [] }).catch(() => ({ order_book_details: [] })),
+  ]);
+  const oiMap = {};
+  (od.order_book_details || []).forEach((d) => { const p = num(d.mark_price), oi = num(d.open_interest); oiMap[normCoin(d.symbol)] = p != null && oi != null ? oi * p : null; });
+  const out = {};
+  (fr.funding_rates || []).forEach((x) => { if (x.exchange !== "lighter") return; const f = num(x.rate); if (f != null) out[normCoin(x.symbol)] = { apr: f * 3 * 365 * 100, oiUsd: oiMap[normCoin(x.symbol)] ?? null }; });
   return out;
 }
 async function fetchPacifica() {
   const r = await fetch("https://api.pacifica.fi/api/v1/info/prices"); const d = await j(r); const out = {};
-  (d.data || []).forEach((x) => { const f = num(x.funding); if (f != null) out[normCoin(x.symbol)] = f * 24 * 365 * 100; });
+  (d.data || []).forEach((x) => { const f = num(x.funding), px = num(x.mark), oi = num(x.open_interest);
+    if (f != null) out[normCoin(x.symbol)] = { apr: f * 24 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchVariational() {
   const r = await fetch("https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats"); const d = await j(r); const out = {};
-  (d.listings || []).forEach((x) => { const f = num(x.funding_rate); if (f != null) out[normCoin(x.ticker)] = f * 100; });
+  (d.listings || []).forEach((x) => { const f = num(x.funding_rate), px = num(x.mark_price), oi = num(x.open_interest?.long_open_interest);
+    if (f != null) out[normCoin(x.ticker)] = { apr: f * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchArcus() {
   const r = await fetch("https://api.arcus.xyz/v1/markets"); const d = await j(r); const out = {};
-  (d.markets || []).forEach((x) => { if (x.category !== "CRYPTO" || x.status !== "ONLINE") return; const f = num(x.fundingRate); if (f != null) out[normCoin(x.baseAsset)] = f * 24 * 365 * 100; });
+  (d.markets || []).forEach((x) => { if (x.category !== "CRYPTO" || x.status !== "ONLINE") return; const f = num(x.fundingRate), px = num(x.markPrice), oi = num(x.openInterest);
+    if (f != null) out[normCoin(x.baseAsset)] = { apr: f * 24 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchExtended() {
   const r = await fetch("https://api.starknet.extended.exchange/api/v1/info/markets"); const d = (await j(r)).data || []; const out = {};
-  for (const m of d) { if (m.type !== "PERPETUAL" || m.status !== "ACTIVE") continue; const f = num((m.marketStats || {}).fundingRate); if (f != null) out[normCoin(m.name)] = f * 24 * 365 * 100; }
+  for (const m of d) { if (m.type !== "PERPETUAL" || m.status !== "ACTIVE") continue; const s = m.marketStats || {}; const f = num(s.fundingRate);
+    if (f != null) out[normCoin(m.name)] = { apr: f * 24 * 365 * 100, oiUsd: num(s.openInterest) }; }
   return out;
 }
 async function fetchRiseX() {
   const r = await fetch("https://api.rise.trade/v1/markets"); const mk = (await j(r)).data?.markets || []; const out = {};
-  for (const m of mk) { if (m.active === false) continue; const f8 = num(m.funding_rate_8h); if (f8 != null) out[normCoin((m.base_asset_symbol || m.display_name || "").split("/")[0])] = f8 * 3 * 365 * 100; }
+  for (const m of mk) { if (m.active === false) continue; const f8 = num(m.funding_rate_8h), px = num(m.mark_price), oi = num(m.open_interest);
+    if (f8 != null) out[normCoin((m.base_asset_symbol || m.display_name || "").split("/")[0])] = { apr: f8 * 3 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; }
   return out;
 }
 async function fetchTxflow() {
@@ -63,7 +82,8 @@ async function fetchTxflow() {
   const out = {};
   await Promise.allSettled(Object.entries(bySym).map(async ([base, name]) => {
     const r = await fetch("https://api.txflow.com/info", { method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: name }) });
-    const f = num((await j(r)).nodeCtx?.funding); if (f != null) out[base] = f * 24 * 365;  // already percent
+    const c = await j(r); const n = c.nodeCtx || {}; const f = num(n.funding), px = num(n.markPx || n.oraclePx), oi = num(n.openInterest);
+    if (f != null) out[base] = { apr: f * 24 * 365, oiUsd: oi != null && px != null ? oi * px : null };  // funding already percent
   }));
   return out;
 }
@@ -80,39 +100,74 @@ const SOURCES = [
   ["TxFlow", fetchTxflow],
 ];
 
+async function sendTelegram(text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chat) { console.log("telegram: secrets not set, skipping alerts"); return; }
+  const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chat, text, parse_mode: "HTML", disable_web_page_preview: true }),
+  });
+  if (!r.ok) console.error("telegram send failed:", r.status, await r.text().catch(() => ""));
+  else console.log("telegram: alert sent");
+}
+const fmtMoney = (n) => n == null ? "?" : n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? "$" + (n / 1e3).toFixed(0) + "K" : "$" + n.toFixed(0);
+
 async function main() {
   const settled = await Promise.allSettled(SOURCES.map(([, f]) => f()));
-  const byCoin = {};  // coin -> [apr, ...]
+  const byCoin = {};  // coin -> [{ex, apr, oiUsd}, ...]
   settled.forEach((s, i) => {
     if (s.status !== "fulfilled") { console.error("source failed:", SOURCES[i][0], String(s.reason)); return; }
-    for (const [coin, apr] of Object.entries(s.value)) { (byCoin[coin] ||= []).push(apr); }
+    for (const [coin, v] of Object.entries(s.value)) { if (v.apr == null) continue; (byCoin[coin] ||= []).push({ ex: SOURCES[i][0], ...v }); }
   });
 
   const now = Date.now();
-  const snapshot = {};  // coin -> netAPR
-  for (const [coin, aprs] of Object.entries(byCoin)) {
-    if (aprs.length < 2) continue;
-    const net = Math.max(...aprs) - Math.min(...aprs);
-    snapshot[coin] = Math.round(net * 10) / 10;
+  const snapshot = {};  // coin -> { net, depth, long, short }
+  for (const [coin, legs] of Object.entries(byCoin)) {
+    if (legs.length < 2) continue;
+    const sorted = legs.slice().sort((a, b) => a.apr - b.apr);
+    const long = sorted[0], short = sorted[sorted.length - 1];
+    const depths = [long.oiUsd, short.oiUsd].filter((v) => v != null);
+    snapshot[coin] = {
+      net: Math.round((short.apr - long.apr) * 10) / 10,
+      depth: depths.length ? Math.min(...depths) : null,
+      long: long.ex, short: short.ex,
+    };
   }
 
-  let hist = { updated: 0, points: {} };
+  let hist = { updated: 0, points: {}, alerts: {} };
   try { hist = JSON.parse(await readFile(HIST_PATH, "utf8")); } catch { /* first run */ }
-  hist.points ||= {};
+  hist.points ||= {}; hist.alerts ||= {};
 
-  for (const [coin, net] of Object.entries(snapshot)) {
-    const arr = (hist.points[coin] ||= []);
-    arr.push([now, net]);
-  }
-  // prune to rolling window and drop empty coins
+  for (const [coin, s] of Object.entries(snapshot)) (hist.points[coin] ||= []).push([now, s.net]);
   for (const coin of Object.keys(hist.points)) {
     hist.points[coin] = hist.points[coin].filter((p) => p[0] >= now - WINDOW_MS);
     if (!hist.points[coin].length) delete hist.points[coin];
   }
-  hist.updated = now;
 
+  // ── Opportunity alerts ──────────────────────────────────────────────
+  const alerts = [];
+  for (const [coin, s] of Object.entries(snapshot)) {
+    if (s.net < ALERT_MIN_APR) continue;
+    if (s.depth == null || s.depth < ALERT_MIN_DEPTH) continue;
+    const pts = hist.points[coin] || [];
+    if (pts.length < 2 || pts[pts.length - 2][1] < ALERT_MIN_APR * 0.7) continue;  // must be sustained, not a one-off spike
+    if (now - (hist.alerts[coin] || 0) < ALERT_COOLDOWN_MS) continue;              // cooldown
+    alerts.push({ coin, ...s });
+  }
+  alerts.sort((a, b) => b.net - a.net);
+  const picks = alerts.slice(0, ALERT_MAX);
+  if (picks.length) {
+    const lines = picks.map((a) => `• <b>${a.coin}</b>  +${a.net.toFixed(0)}% APR — LONG ${a.long} / SHORT ${a.short}  (${fmtMoney(a.depth)})`);
+    const text = `🚨 <b>New delta-neutral opportunities</b>\n\n${lines.join("\n")}\n\n🔗 <a href="https://lyfher.xyz/funding">lyfher.xyz/funding</a>`;
+    await sendTelegram(text);
+    for (const a of picks) hist.alerts[a.coin] = now;
+  }
+  // prune stale cooldown entries
+  for (const coin of Object.keys(hist.alerts)) if (now - hist.alerts[coin] > WINDOW_MS) delete hist.alerts[coin];
+
+  hist.updated = now;
   await writeFile(HIST_PATH, JSON.stringify(hist));
-  console.log(`snapshot: ${Object.keys(snapshot).length} coins, ${Object.keys(hist.points).length} tracked`);
+  console.log(`snapshot: ${Object.keys(snapshot).length} coins, ${Object.keys(hist.points).length} tracked, ${picks.length} alerts`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
