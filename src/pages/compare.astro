@@ -140,10 +140,66 @@ const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label,
     </div>
   </div>
 
+  <!-- Pointfolio CTA -->
+  <div class="flex justify-center mb-10">
+    <button id="pf-btn" onclick="buildPointfolio()"
+      class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-6 py-3 rounded-xl transition-colors">
+      📸 <span data-en="Generate my Pointfolio" data-es="Generar mi Pointfolio">Generate my Pointfolio</span>
+    </button>
+  </div>
+
+  <!-- Pointfolio modal -->
+  <div id="pf-modal" class="hidden fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 overflow-auto">
+    <div id="pf-card" style="width:600px;max-width:94vw;background:linear-gradient(160deg,#0d1220,#0a0e18);border:1px solid #1f2937;border-radius:20px;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+      <!-- header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+        <div>
+          <div style="font-size:20px;font-weight:800;color:#fff">⚡ Lyfher <span style="color:#4ade80">Pointfolio</span></div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px">@LyfherCrypto · <span id="pf-date"></span></div>
+        </div>
+        <span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#4ade80;border:1px solid #4ade8055;background:#4ade8014;border-radius:8px;padding:4px 8px">EARLY</span>
+      </div>
+      <!-- table -->
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="color:#6b7280;font-size:11px;text-transform:uppercase">
+            <th style="text-align:left;padding:6px 12px">Project</th>
+            <th style="text-align:right;padding:6px 12px">Points</th>
+            <th style="text-align:right;padding:6px 12px;color:#f87171">🐻 Bear</th>
+            <th style="text-align:right;padding:6px 12px;color:#facc15">📊 Base</th>
+            <th style="text-align:right;padding:6px 12px;color:#4ade80">🚀 Bull</th>
+          </tr>
+        </thead>
+        <tbody id="pf-body"></tbody>
+        <tfoot>
+          <tr style="border-top:2px solid #374151;background:#111827">
+            <td style="padding:12px;font-weight:800;color:#fff">TOTAL</td>
+            <td style="padding:12px"></td>
+            <td id="pf-tot-bear" style="padding:12px;text-align:right;font-weight:800;color:#f87171;font-size:15px">$0</td>
+            <td id="pf-tot-base" style="padding:12px;text-align:right;font-weight:800;color:#facc15;font-size:15px">$0</td>
+            <td id="pf-tot-bull" style="padding:12px;text-align:right;font-weight:800;color:#4ade80;font-size:15px">$0</td>
+          </tr>
+        </tfoot>
+      </table>
+      <!-- footer -->
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1f2937;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:#9ca3af">lyfher.xyz — <span style="color:#4ade80">delta-neutral scanner + points</span></span>
+        <span style="font-size:10px;color:#4b5563">Not financial advice</span>
+      </div>
+    </div>
+    <!-- actions -->
+    <div class="flex items-center justify-center gap-3 mt-4 flex-wrap">
+      <button onclick="downloadPointfolio()" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">⬇ <span data-en="Download PNG" data-es="Descargar PNG">Download PNG</span></button>
+      <button onclick="sharePointfolio()" class="inline-flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-sky-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">𝕏 <span data-en="Share on X" data-es="Compartir en X">Share on X</span></button>
+      <button onclick="document.getElementById('pf-modal').classList.add('hidden')" class="text-gray-500 hover:text-white text-sm px-4 py-2.5" data-en="Close" data-es="Cerrar">Close</button>
+    </div>
+  </div>
 
 </Layout>
 
-<script define:vars={{ projectsData: filteredProjects.map(p => ({ slug: p.slug, scenarios: p.scenarios })) }}>
+<script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script define:vars={{ projectsData: filteredProjects.map(p => ({ slug: p.slug, name: p.name, accentHex: p.accentHex, logoSrc: p.logoSrc, logoEmoji: p.logoEmoji, scenarios: p.scenarios })) }}>
   function fmt(n) {
     if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2) + 'M';
     if (n >= 1_000)     return '$' + (n / 1_000).toFixed(1) + 'K';
@@ -182,4 +238,49 @@ const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label,
   updateCompare();
 
   window.updateCompare = updateCompare;
+
+  // ── Pointfolio (shareable card) ──────────────────────────────────────
+  function pfFmt(n){ if(n>=1e6) return '$'+(n/1e6).toFixed(2)+'M'; if(n>=1e3) return '$'+(n/1e3).toFixed(1)+'K'; return '$'+Math.round(n); }
+  function buildPointfolio(){
+    const rows=[], tot=[0,0,0];
+    projectsData.forEach(p=>{
+      const pts=parseFloat(document.getElementById('pts-'+p.slug)?.value)||0;
+      if(pts<=0) return;
+      const vals=p.scenarios.map(s=>pts*s.pricePerPoint);
+      vals.forEach((v,i)=>tot[i]+=v);
+      rows.push({name:p.name, pts, vals});
+    });
+    const body=document.getElementById('pf-body');
+    const es=(document.documentElement.lang==='es');
+    if(!rows.length){
+      body.innerHTML='<tr><td colspan="5" style="padding:24px;text-align:center;color:#9ca3af">'+(es?'Ingresa tus puntos arriba primero':'Enter your points above first')+'</td></tr>';
+    } else {
+      body.innerHTML=rows.map(r=>`<tr style="border-top:1px solid #1f2937">
+        <td style="padding:10px 12px;font-weight:600;color:#fff">${r.name}</td>
+        <td style="padding:10px 12px;text-align:right;color:#cbd5e1">${r.pts.toLocaleString()}</td>
+        <td style="padding:10px 12px;text-align:right;color:#f87171;font-weight:600">${pfFmt(r.vals[0])}</td>
+        <td style="padding:10px 12px;text-align:right;color:#facc15;font-weight:600">${pfFmt(r.vals[1])}</td>
+        <td style="padding:10px 12px;text-align:right;color:#4ade80;font-weight:600">${pfFmt(r.vals[2])}</td>
+      </tr>`).join('');
+    }
+    document.getElementById('pf-tot-bear').textContent=pfFmt(tot[0]);
+    document.getElementById('pf-tot-base').textContent=pfFmt(tot[1]);
+    document.getElementById('pf-tot-bull').textContent=pfFmt(tot[2]);
+    document.getElementById('pf-date').textContent=new Date().toLocaleDateString(es?'es':'en',{year:'numeric',month:'short',day:'numeric'});
+    window._pfTot=tot;
+    document.getElementById('pf-modal').classList.remove('hidden');
+  }
+  async function downloadPointfolio(){
+    const card=document.getElementById('pf-card');
+    if(typeof html2canvas!=='function'){ alert('Loading… try again in a second'); return; }
+    const canvas=await html2canvas(card,{backgroundColor:'#0a0e18',scale:2});
+    const a=document.createElement('a'); a.download='lyfher-pointfolio.png'; a.href=canvas.toDataURL('image/png'); a.click();
+  }
+  function sharePointfolio(){
+    const t=window._pfTot||[0,0,0];
+    const text=`My airdrop Pointfolio 📊 (base case ${pfFmt(t[1])})\n\nTracking my points + farming delta-neutral funding with @LyfherCrypto\n\nlyfher.xyz`;
+    window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  }
+  document.getElementById('pf-modal').addEventListener('click',e=>{ if(e.target.id==='pf-modal') e.currentTarget.classList.add('hidden'); });
+  window.buildPointfolio=buildPointfolio; window.downloadPointfolio=downloadPointfolio; window.sharePointfolio=sharePointfolio;
 </script>
