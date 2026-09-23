@@ -10,6 +10,7 @@ const TXFLOW_MAJORS = [
 
 const num = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
 const j = (r) => r.json();
+const normCoin = (s) => String(s).replace(/[-_/].*$/, "").replace(/USDT$|USDC$|USD$|PERP$/i, "").toUpperCase();
 
 async function fetchExtended() {
   const r = await fetch("https://api.starknet.extended.exchange/api/v1/info/markets");
