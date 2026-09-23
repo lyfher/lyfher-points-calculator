@@ -502,8 +502,9 @@ function tradeMath(r){
 function buildDetail(r){
   const depthWarn=r.depth!=null&&r.depth<1e6;
   return `<div class="text-xs">
-    <div class="text-gray-500 mb-1">${T('Funding APR by exchange — pick your legs where you have accounts','APR de funding por exchange — elige tus patas donde tengas cuenta')}</div>
-    ${r.legs.slice().sort((a,b)=>a.apr-b.apr).map(l=>legLine(l, l===r.long?'long':l===r.short?'short':'')).join('')}
+    <div class="text-gray-500 mb-1">${T('Your pair','Tu par')}</div>
+    ${legLine(r.long,'long')}
+    ${legLine(r.short,'short')}
     ${(() => { const btn=(l)=>{ const m=EX[l.ex]||{}; return m.ref?`<a href="${m.ref}" target="_blank" rel="noopener noreferrer" class="inline-block px-2.5 py-1 rounded border font-semibold" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${T('Open','Abrir')} ${m.short} ↗</a>`:''; };
       const b=[btn(r.long),btn(r.short)].filter(Boolean).join(' '); return b?`<div class="mt-2 flex gap-2">${b}</div>`:''; })()}
     ${(depthWarn?`<div class="mt-2 text-red-400">⚠ ${T('Thin market ('+fmtMoney(r.depth)+' OI) — hard to size in, slippage is high.','Mercado fino ('+fmtMoney(r.depth)+' OI) — difícil entrar, slippage alto.')}</div>`:'')}
