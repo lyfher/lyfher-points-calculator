@@ -88,6 +88,26 @@ async function fetchTxflow() {
   return out;
 }
 
+async function fetchAster() {
+  const arr = await fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex").then(j);
+  const bySym = {};
+  for (const m of arr) { const f = num(m.lastFundingRate), px = num(m.markPrice); if (f == null || px == null) continue;
+    const coin = normCoin(m.symbol); if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, apr: f * 3 * 365 * 100, px }; }
+  const oi = {};
+  await Promise.allSettled(TXFLOW_MAJORS.filter((c) => bySym[c]).map(async (c) => {
+    const rr = await fetch("https://fapi.asterdex.com/fapi/v1/openInterest?symbol=" + bySym[c].sym);
+    if (rr.ok) { const o = num((await rr.json()).openInterest); if (o != null) oi[c] = o * bySym[c].px; }
+  }));
+  const out = {}; for (const [coin, v] of Object.entries(bySym)) out[coin] = { apr: v.apr, oiUsd: oi[coin] ?? null }; return out;
+}
+async function fetchParadex() {
+  const res = (await fetch("https://api.prod.paradex.trade/v1/markets/summary?market=ALL").then(j)).results || [];
+  const out = {};
+  for (const m of res) { if (!/-USD-PERP$/.test(m.symbol || "")) continue; const f = num(m.funding_rate), px = num(m.mark_price), oi = num(m.open_interest);
+    if (f != null && px != null) out[normCoin(m.symbol)] = { apr: f * 3 * 365 * 100, oiUsd: oi != null ? oi * px : null }; }
+  return out;
+}
+
 const SOURCES = [
   ["Hyperliquid", fetchHL],
   ["Lighter", () => fetchLighterHost("https://mainnet.zklighter.elliot.ai")],
@@ -98,6 +118,8 @@ const SOURCES = [
   ["Extended", fetchExtended],
   ["RiseX", fetchRiseX],
   ["TxFlow", fetchTxflow],
+  ["Aster", fetchAster],
+  ["Paradex", fetchParadex],
 ];
 
 async function sendTelegram(text) {

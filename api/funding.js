@@ -91,18 +91,56 @@ async function fetchTxflow() {
   return entries.filter((e) => e.status === "fulfilled" && e.value).map((e) => e.value);
 }
 
+async function fetchAster() {
+  const r = await fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex");
+  if (!r.ok) throw new Error("aster " + r.status);
+  const arr = await j(r);
+  const bySym = {};                       // normCoin -> { sym, apr, px }
+  for (const m of arr) {
+    const f = num(m.lastFundingRate), px = num(m.markPrice);
+    if (f == null || px == null) continue;
+    const coin = normCoin(m.symbol);
+    if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, apr: f * 3 * 365 * 100, px };  // 8h funding fraction; prefer USDT pair
+  }
+  const majors = TXFLOW_MAJORS.filter((c) => bySym[c]);
+  const oi = {};
+  await Promise.allSettled(majors.map(async (c) => {
+    const rr = await fetch("https://fapi.asterdex.com/fapi/v1/openInterest?symbol=" + bySym[c].sym);
+    if (rr.ok) { const o = num((await rr.json()).openInterest); if (o != null) oi[c] = o * bySym[c].px; }
+  }));
+  return Object.entries(bySym).map(([coin, v]) => ({ coin, apr: v.apr, px: v.px, oiUsd: oi[coin] ?? null, volUsd: null }));
+}
+
+async function fetchParadex() {
+  const r = await fetch("https://api.prod.paradex.trade/v1/markets/summary?market=ALL");
+  if (!r.ok) throw new Error("paradex " + r.status);
+  const res = (await j(r)).results || [];
+  const out = [];
+  for (const m of res) {
+    if (!/-USD-PERP$/.test(m.symbol || "")) continue;   // perps only (skip options)
+    const f = num(m.funding_rate), px = num(m.mark_price), oi = num(m.open_interest);
+    if (f == null || px == null) continue;
+    out.push({ coin: normCoin(m.symbol), apr: f * 3 * 365 * 100, px, oiUsd: oi != null ? oi * px : null, volUsd: num(m.volume_24h) });  // 8h funding fraction
+  }
+  return out;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=60");
-  const [ext, rise, tx] = await Promise.allSettled([fetchExtended(), fetchRiseX(), fetchTxflow()]);
+  const [ext, rise, tx, aster, para] = await Promise.allSettled([fetchExtended(), fetchRiseX(), fetchTxflow(), fetchAster(), fetchParadex()]);
   res.status(200).json({
     extended: ext.status === "fulfilled" ? ext.value : null,
     risex: rise.status === "fulfilled" ? rise.value : null,
     txflow: tx.status === "fulfilled" ? tx.value : null,
+    aster: aster.status === "fulfilled" ? aster.value : null,
+    paradex: para.status === "fulfilled" ? para.value : null,
     errors: {
       extended: ext.status === "rejected" ? String(ext.reason) : null,
       risex: rise.status === "rejected" ? String(rise.reason) : null,
       txflow: tx.status === "rejected" ? String(tx.reason) : null,
+      aster: aster.status === "rejected" ? String(aster.reason) : null,
+      paradex: para.status === "rejected" ? String(para.reason) : null,
     },
   });
 }

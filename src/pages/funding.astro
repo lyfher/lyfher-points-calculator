@@ -238,6 +238,8 @@ const EX = {
   Arcus:      { short:'Arcus',       color:'#f472b6', tier:'C', interval:'1h', ref:'https://waitlist.arcus.xyz/s/LYFHER' },
   RiseX:      { short:'RiseX',       color:'#e879f9', tier:'C', interval:'8h', ref:'https://www.rise.trade/invite/lyfher' },
   TxFlow:     { short:'TxFlow',      color:'#4ade80', tier:'C', interval:'1h', ref:'https://app.txflow.com/r/TXLYFHER' },
+  Aster:      { short:'Aster',       color:'#f59e0b', tier:'B', interval:'8h', ref:'' },
+  Paradex:    { short:'Paradex',     color:'#fb7185', tier:'B', interval:'8h', ref:'' },
 };
 const isEst = name => EX[name] && EX[name].tier === 'A';
 
@@ -313,7 +315,7 @@ async function fetchArcus(){
 async function fetchProxy(){
   const r=await fetch('/api/funding');
   if(!r.ok) throw 0; const j=await r.json(); const res=[];
-  [['Extended',j.extended],['RiseX',j.risex],['TxFlow',j.txflow]].forEach(([ex,arr])=>{
+  [['Extended',j.extended],['RiseX',j.risex],['TxFlow',j.txflow],['Aster',j.aster],['Paradex',j.paradex]].forEach(([ex,arr])=>{
     if(!arr) return; const out={};
     arr.forEach(x=>{ if(x.apr==null) return; out[normCoin(x.coin)]={apr:x.apr,px:x.px,oiUsd:x.oiUsd,volUsd:x.volUsd}; });
     res.push({ex,data:out});
