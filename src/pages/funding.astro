@@ -96,10 +96,22 @@ import Layout from '../layouts/Layout.astro';
 <div class="flex items-center gap-2 mb-4">
   <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse shrink-0"></div>
   <span id="status-text" class="text-sm text-gray-500">Loading…</span>
-  <button id="refresh-btn" class="ml-auto flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-green-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">
-    <span id="refresh-icon" class="inline-block">↻</span>
-    <span data-en="Refresh" data-es="Actualizar">Refresh</span>
-  </button>
+  <div class="ml-auto flex items-center gap-2">
+    <label id="alert-label" class="text-xs text-gray-500 flex items-center gap-1" title="Play a sound + browser notification when a new opportunity above this Net APR appears (only while this tab is open)">
+      <span>🔔</span><span data-en="Alert ≥" data-es="Alerta ≥">Alert ≥</span>
+    </label>
+    <select id="alert-apr" class="bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
+      <option value="0" data-en="Off" data-es="Off">Off</option>
+      <option value="30">30%</option>
+      <option value="50">50%</option>
+      <option value="100">100%</option>
+      <option value="200">200%</option>
+    </select>
+    <button id="refresh-btn" class="flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-green-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">
+      <span id="refresh-icon" class="inline-block">↻</span>
+      <span data-en="Refresh" data-es="Actualizar">Refresh</span>
+    </button>
+  </div>
 </div>
 
 <!-- Top pick -->
@@ -207,6 +219,7 @@ const REFRESH_SEC = 10;
 let rows = [], timer = null, autoOn = true, cd = REFRESH_SEC, view = 'table', hist = {};
 const openDetails = new Set();   // coins whose detail panel is expanded (persist across refresh)
 const MIN_HIST = 24;             // min hourly snapshots before consistency is shown as reliable
+let alertThr = 0, prevAlerted = new Set(), audioCtx = null;   // browser opportunity alerts
 let sortKey = 'net', sortDir = -1;
 let enabledEx = null;   // Set of enabled exchange keys (null = all until built)
 const $ = id => document.getElementById(id);
@@ -559,6 +572,35 @@ function bindRows(){
 
 function updateSortArrows(){ document.querySelectorAll('.sort-arrow').forEach(el=>{ el.textContent=el.dataset.key===sortKey?(sortDir<0?'▼':'▲'):''; }); }
 
+// ── Browser opportunity alerts (sound + notification, tab must be open) ──
+function beep(){
+  try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    const t=audioCtx.currentTime;
+    [0,0.16].forEach(off=>{ const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001,t+off); g.gain.exponentialRampToValueAtTime(0.25,t+off+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+off+0.14);
+      o.start(t+off); o.stop(t+off+0.15); });
+  }catch{}
+}
+function alertCandidates(){
+  // opportunities passing current filters (depth/spread/dex) above the alert APR
+  return getFiltered().filter(r=>r.netAPR>=alertThr).map(r=>r.coin);
+}
+function primeAlerts(){ prevAlerted=new Set(alertThr?alertCandidates():[]); }
+function checkAlerts(){
+  if(!alertThr){ prevAlerted.clear(); return; }
+  const cur=alertCandidates(), curSet=new Set(cur);
+  const fresh=cur.filter(c=>!prevAlerted.has(c));
+  prevAlerted=curSet;
+  if(!fresh.length) return;
+  beep();
+  if('Notification' in window && Notification.permission==='granted'){
+    const rows=window._show||[]; const info=c=>{const r=rows.find(x=>x.coin===c); return r?`${c} +${r.netAPR.toFixed(0)}%`:c;};
+    const body=fresh.slice(0,5).map(info).join(', ')+(fresh.length>5?` +${fresh.length-5}`:'');
+    try{ new Notification('Lyfher — '+T('new opportunity','nueva oportunidad'), {body, icon:'/favicon.svg'}); }catch{}
+  }
+}
+
 // ⓘ help markers on column headers (hover on desktop, tap on mobile)
 function bindHelp(){
   const tip=$('tip');
@@ -660,6 +702,7 @@ async function load(){
   try{ const hr=await fetch('/history.json',{cache:'no-store'}); if(hr.ok){ hist=(await hr.json()).points||{}; } }catch{}
   rows=buildRows(sources);
   render();
+  if(alertThr){ if(!window._alertsReady){ primeAlerts(); window._alertsReady=true; } else checkAlerts(); }
   setStatus(live===0?'error':'live');
   $('refresh-icon').style.animation='';
 }
@@ -680,9 +723,21 @@ $('dex-none').addEventListener('click',()=>{ enabledEx=new Set(); renderDexChips
 $('refresh-btn').addEventListener('click',()=>{ if(autoOn)startCountdown(); load(); });
 $('view-table').addEventListener('click',()=>setView('table'));
 $('view-heat').addEventListener('click',()=>setView('heat'));
+$('alert-apr').addEventListener('change',e=>{
+  alertThr=parseFloat(e.target.value)||0;
+  try{ localStorage.setItem('lyfher_alert_apr', e.target.value); }catch{}
+  $('alert-label').classList.toggle('text-green-400', alertThr>0);
+  $('alert-label').classList.toggle('text-gray-500', alertThr===0);
+  if(alertThr>0){
+    if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
+    try{ beep(); }catch{}          // unlock audio on user gesture + confirm it works
+    primeAlerts(); window._alertsReady=true;
+  }else{ prevAlerted.clear(); window._alertsReady=false; }
+});
 document.querySelectorAll('.sortable').forEach(th=>th.addEventListener('click',()=>{ const k=th.dataset.sort; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=-1;} renderTable(); }));
 
 document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}.help{margin-left:3px;color:#6b7280;cursor:help;font-weight:400}.help:hover{color:#d1d5db}</style>');
 enabledEx=new Set(Object.keys(EX)); renderDexChips(); bindHelp();
+try{ const sv=localStorage.getItem('lyfher_alert_apr'); if(sv&&sv!=='0'){ $('alert-apr').value=sv; alertThr=parseFloat(sv)||0; $('alert-label').classList.add('text-green-400'); $('alert-label').classList.remove('text-gray-500'); } }catch{}
 load(); startCountdown();
 </script>
