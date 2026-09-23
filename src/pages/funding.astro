@@ -117,7 +117,7 @@ import Layout from '../layouts/Layout.astro';
             <span data-en="Net APR" data-es="APR Neto">Net APR</span><span class="help" data-tip-en="Net APR = the funding spread you capture right now: short's APR minus long's APR. This is your yield if funding holds." data-tip-es="APR Neto = el spread de funding que capturas ahora: APR del corto menos APR del largo. Es tu rendimiento si el funding se mantiene.">ⓘ</span> <span class="sort-arrow" data-key="net"></span>
           </th>
           <th class="text-right px-3 py-3">
-            <span data-en="7d Avg" data-es="Prom 7d">7d Avg</span><span class="help" data-tip-en="7d Avg = average Net APR over the last 7 days (hourly snapshots). The dot is CONSISTENCY: 🟢 green = stable/reliable, 🟡 yellow = varies, 🔴 red = very volatile. Needs ~a day of data to matter." data-tip-es="Prom 7d = APR neto promedio de los últimos 7 días (snapshots por hora). El punto es la CONSISTENCIA: 🟢 verde = estable/confiable, 🟡 amarillo = varía, 🔴 rojo = muy volátil. Necesita ~un día de datos para valer.">ⓘ</span>
+            <span data-en="7d Trend" data-es="Tend. 7d">7d Trend</span><span class="help" data-tip-en="Mini-chart of this pair's Net APR over the last ~7 days (hourly snapshots) — shows if the spread is rising, falling or holding. Line COLOR = consistency: 🟢 green = stable/reliable, 🟡 yellow = varies, 🔴 red = very volatile. Hover the cell for the 7d average. Needs ~a day of data to fill in." data-tip-es="Mini-gráfico del Net APR de este par en los últimos ~7 días (snapshots por hora) — muestra si el spread sube, baja o se mantiene. El COLOR de la línea = consistencia: 🟢 verde = estable/confiable, 🟡 amarillo = varía, 🔴 rojo = muy volátil. Pasa el mouse por la celda para ver el promedio 7d. Necesita ~un día de datos para llenarse.">ⓘ</span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span><span class="help" data-tip-en="Entry Spread = price gap between the two legs when you open. Negative/small (green) = cheap or you get paid to enter; large (red) = costly entry you must recover with funding." data-tip-es="Spread de Entrada = diferencia de precio entre las dos patas al abrir. Negativo/pequeño (verde) = barato o te pagan por entrar; grande (rojo) = entrada cara que debes recuperar con el funding.">ⓘ</span> <span class="sort-arrow" data-key="spread"></span>
@@ -338,6 +338,14 @@ function badge(ex,dir){
   return `<span class="text-xs font-semibold px-2 py-0.5 rounded border" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${arrow} ${m.short}</span>`;
 }
 function netColor(v){ return v>=30?'text-green-300':v>=12?'text-green-400':v>=5?'text-emerald-500':'text-gray-500'; }
+function sparkline(pts,color){
+  const v=pts.slice(-48).map(p=>p[1]); const n=v.length; if(n<2) return '';
+  const w=60,h=20,pad=2, min=Math.min(...v),max=Math.max(...v),rng=(max-min)||1, step=(w-2*pad)/(n-1);
+  const xy=i=>[pad+i*step, h-pad-((v[i]-min)/rng)*(h-2*pad)];
+  const pts2=v.map((_,i)=>xy(i).map(n=>n.toFixed(1)).join(',')).join(' ');
+  const [lx,ly]=xy(n-1);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts2}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="1.7" fill="${color}"/></svg>`;
+}
 function histStats(coin){
   const pts=hist[coin]||[]; if(pts.length<2) return null;
   const now=Date.now(), vals=a=>a.map(p=>p[1]), mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
@@ -442,10 +450,11 @@ function renderTable(){
         <div class="flex items-center justify-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</div>
       </td>
       <td class="px-3 py-3 text-right font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%</td>
-      ${(() => { const h=histStats(r.coin); if(!h) return `<td class="px-3 py-3 text-right text-gray-600" title="${T('Collecting history…','Recolectando historial…')}">—</td>`;
-        const dot=h.cons==='high'?'#22c55e':h.cons==='med'?'#eab308':'#ef4444';
-        const tt=`${T('consistency','consistencia')}: ${h.cons} · ${h.n} ${T('samples','muestras')}`;
-        return `<td class="px-3 py-3 text-right font-mono whitespace-nowrap"><span class="text-gray-200">${h.avg7>=0?'+':''}${h.avg7.toFixed(0)}%</span> <span class="inline-block w-2 h-2 rounded-full align-middle ml-0.5" style="background:${dot}" title="${tt}"></span></td>`; })()}
+      ${(() => { const h=histStats(r.coin), pts=hist[r.coin]||[];
+        if(!h||pts.length<2) return `<td class="px-3 py-3 text-right text-gray-600" title="${T('Collecting history…','Recolectando historial…')}">—</td>`;
+        const col=h.cons==='high'?'#22c55e':h.cons==='med'?'#eab308':'#ef4444';
+        const tt=`${T('7d avg','prom 7d')} ${h.avg7>=0?'+':''}${h.avg7.toFixed(0)}% · ${T('consistency','consistencia')}: ${h.cons} · ${h.n} ${T('samples','muestras')}`;
+        return `<td class="px-3 py-3 whitespace-nowrap" title="${tt}"><div class="flex justify-end">${sparkline(pts,col)}</div></td>`; })()}
       <td class="px-3 py-3 text-right font-mono ${spreadCls}">${spreadTxt}</td>
       <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-200'}">${fmtMoney(r.depth)}</td>
     </tr>
