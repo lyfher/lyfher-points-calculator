@@ -344,7 +344,10 @@ function deriveRow(row){
   const long=legs[0], short=legs[legs.length-1];   // long lowest apr, short highest
   const netAPR=short.apr-long.apr;
   let spread=null;                                  // signed entry spread: long px vs short px
-  if(long.px&&short.px) spread=((long.px-short.px)/short.px)*100;
+  if(long.px&&short.px){
+    const s=((long.px-short.px)/short.px)*100;
+    spread=Math.abs(s)>25?null:s;                   // >25% = contract-size mismatch (e.g. US500 full vs US500 mini), not a real entry spread → suppress
+  }
   const legDepth=[long.oiUsd,short.oiUsd].filter(v=>v!=null);
   const allD=legs.map(l=>l.oiUsd).filter(v=>v!=null);
   const depth=legDepth.length?Math.min(...legDepth):(allD.length?Math.max(...allD):null);
