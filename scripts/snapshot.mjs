@@ -25,12 +25,12 @@ const TXFLOW_MAJORS = [
   "HYPE","ENA","JUP","AAVE","UNI","LDO","ONDO","PENDLE","XPL","WLD","FARTCOIN",
 ];
 
-// Each fetcher returns { [coin]: { apr, oiUsd } }
+// Each fetcher returns { [coin]: { apr, px, oiUsd } }  (px feeds the entry-spread history)
 async function fetchHL() {
   const r = await fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "metaAndAssetCtxs" }) });
   const [meta, ctxs] = await j(r); const out = {};
   meta.universe.forEach((u, i) => { const c = ctxs[i] || {}; const f = num(c.funding), px = num(c.markPx), oi = num(c.openInterest);
-    if (f != null) out[normCoin(u.name)] = { apr: f * 24 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
+    if (f != null) out[normCoin(u.name)] = { apr: f * 24 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchLighterHost(host) {
@@ -38,40 +38,40 @@ async function fetchLighterHost(host) {
     fetch(host + "/api/v1/funding-rates").then(j),
     fetch(host + "/api/v1/orderBookDetails").then((r) => r.ok ? r.json() : { order_book_details: [] }).catch(() => ({ order_book_details: [] })),
   ]);
-  const oiMap = {};
-  (od.order_book_details || []).forEach((d) => { const p = num(d.mark_price), oi = num(d.open_interest); oiMap[normCoin(d.symbol)] = p != null && oi != null ? oi * p : null; });
+  const oiMap = {}, pxMap = {};
+  (od.order_book_details || []).forEach((d) => { const p = num(d.mark_price), oi = num(d.open_interest); const c = normCoin(d.symbol); pxMap[c] = p; oiMap[c] = p != null && oi != null ? oi * p : null; });
   const out = {};
-  (fr.funding_rates || []).forEach((x) => { if (x.exchange !== "lighter") return; const f = num(x.rate); if (f != null) out[normCoin(x.symbol)] = { apr: f * 3 * 365 * 100, oiUsd: oiMap[normCoin(x.symbol)] ?? null }; });
+  (fr.funding_rates || []).forEach((x) => { if (x.exchange !== "lighter") return; const f = num(x.rate); const c = normCoin(x.symbol); if (f != null) out[c] = { apr: f * 3 * 365 * 100, px: pxMap[c] ?? null, oiUsd: oiMap[c] ?? null }; });
   return out;
 }
 async function fetchPacifica() {
   const r = await fetch("https://api.pacifica.fi/api/v1/info/prices"); const d = await j(r); const out = {};
   (d.data || []).forEach((x) => { const f = num(x.funding), px = num(x.mark), oi = num(x.open_interest);
-    if (f != null) out[normCoin(x.symbol)] = { apr: f * 24 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
+    if (f != null) out[normCoin(x.symbol)] = { apr: f * 24 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchVariational() {
   const r = await fetch("https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats"); const d = await j(r); const out = {};
   (d.listings || []).forEach((x) => { const f = num(x.funding_rate), px = num(x.mark_price), oi = num(x.open_interest?.long_open_interest);
-    if (f != null) out[normCoin(x.ticker)] = { apr: f * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
+    if (f != null) out[normCoin(x.ticker)] = { apr: f * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchArcus() {
   const r = await fetch("https://api.arcus.xyz/v1/markets"); const d = await j(r); const out = {};
   (d.markets || []).forEach((x) => { if (x.category !== "CRYPTO" || x.status !== "ONLINE") return; const f = num(x.fundingRate), px = num(x.markPrice), oi = num(x.openInterest);
-    if (f != null) out[normCoin(x.baseAsset)] = { apr: f * 24 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; });
+    if (f != null) out[normCoin(x.baseAsset)] = { apr: f * 24 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchExtended() {
   const r = await fetch("https://api.starknet.extended.exchange/api/v1/info/markets"); const d = (await j(r)).data || []; const out = {};
   for (const m of d) { if (m.type !== "PERPETUAL" || m.status !== "ACTIVE") continue; const s = m.marketStats || {}; const f = num(s.fundingRate);
-    if (f != null) out[normCoin(m.name)] = { apr: f * 24 * 365 * 100, oiUsd: num(s.openInterest) }; }
+    if (f != null) out[normCoin(m.name)] = { apr: f * 24 * 365 * 100, px: num(s.markPrice ?? s.lastPrice ?? s.indexPrice), oiUsd: num(s.openInterest) }; }
   return out;
 }
 async function fetchRiseX() {
   const r = await fetch("https://api.rise.trade/v1/markets"); const mk = (await j(r)).data?.markets || []; const out = {};
   for (const m of mk) { if (m.active === false) continue; const f8 = num(m.funding_rate_8h), px = num(m.mark_price), oi = num(m.open_interest);
-    if (f8 != null) out[normCoin((m.base_asset_symbol || m.display_name || "").split("/")[0])] = { apr: f8 * 3 * 365 * 100, oiUsd: oi != null && px != null ? oi * px : null }; }
+    if (f8 != null) out[normCoin((m.base_asset_symbol || m.display_name || "").split("/")[0])] = { apr: f8 * 3 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; }
   return out;
 }
 async function fetchTxflow() {
@@ -83,7 +83,7 @@ async function fetchTxflow() {
   await Promise.allSettled(Object.entries(bySym).map(async ([base, name]) => {
     const r = await fetch("https://api.txflow.com/info", { method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: name }) });
     const c = await j(r); const n = c.nodeCtx || {}; const f = num(n.funding), px = num(n.markPx || n.oraclePx), oi = num(n.openInterest);
-    if (f != null) out[base] = { apr: f * 24 * 365, oiUsd: oi != null && px != null ? oi * px : null };  // funding already percent
+    if (f != null) out[base] = { apr: f * 24 * 365, px, oiUsd: oi != null && px != null ? oi * px : null };  // funding already percent
   }));
   return out;
 }
@@ -98,13 +98,13 @@ async function fetchAster() {
     const rr = await fetch("https://fapi.asterdex.com/fapi/v1/openInterest?symbol=" + bySym[c].sym);
     if (rr.ok) { const o = num((await rr.json()).openInterest); if (o != null) oi[c] = o * bySym[c].px; }
   }));
-  const out = {}; for (const [coin, v] of Object.entries(bySym)) out[coin] = { apr: v.apr, oiUsd: oi[coin] ?? null }; return out;
+  const out = {}; for (const [coin, v] of Object.entries(bySym)) out[coin] = { apr: v.apr, px: v.px, oiUsd: oi[coin] ?? null }; return out;
 }
 async function fetchParadex() {
   const res = (await fetch("https://api.prod.paradex.trade/v1/markets/summary?market=ALL").then(j)).results || [];
   const out = {};
   for (const m of res) { if (!/-USD-PERP$/.test(m.symbol || "")) continue; const f = num(m.funding_rate), px = num(m.mark_price), oi = num(m.open_interest);
-    if (f != null && px != null) out[normCoin(m.symbol)] = { apr: f * 3 * 365 * 100, oiUsd: oi != null ? oi * px : null }; }
+    if (f != null && px != null) out[normCoin(m.symbol)] = { apr: f * 3 * 365 * 100, px, oiUsd: oi != null ? oi * px : null }; }
   return out;
 }
 
@@ -149,21 +149,30 @@ async function main() {
     const sorted = legs.slice().sort((a, b) => a.apr - b.apr);
     const long = sorted[0], short = sorted[sorted.length - 1];
     const depths = [long.oiUsd, short.oiUsd].filter((v) => v != null);
+    // entry spread: long px vs short px; >25% = contract-size mismatch (e.g. US500 full vs mini), not real → drop
+    let spread = null;
+    if (long.px && short.px) { const s = ((long.px - short.px) / short.px) * 100; if (Math.abs(s) <= 25) spread = Math.round(s * 1000) / 1000; }
     snapshot[coin] = {
       net: Math.round((short.apr - long.apr) * 10) / 10,
       depth: depths.length ? Math.min(...depths) : null,
-      long: long.ex, short: short.ex,
+      long: long.ex, short: short.ex, spread,
     };
   }
 
-  let hist = { updated: 0, points: {}, alerts: {} };
+  let hist = { updated: 0, points: {}, spreads: {}, alerts: {} };
   try { hist = JSON.parse(await readFile(HIST_PATH, "utf8")); } catch { /* first run */ }
-  hist.points ||= {}; hist.alerts ||= {};
+  hist.points ||= {}; hist.spreads ||= {}; hist.alerts ||= {};
 
   for (const [coin, s] of Object.entries(snapshot)) (hist.points[coin] ||= []).push([now, s.net]);
   for (const coin of Object.keys(hist.points)) {
     hist.points[coin] = hist.points[coin].filter((p) => p[0] >= now - WINDOW_MS);
     if (!hist.points[coin].length) delete hist.points[coin];
+  }
+
+  for (const [coin, s] of Object.entries(snapshot)) if (s.spread != null) (hist.spreads[coin] ||= []).push([now, s.spread]);
+  for (const coin of Object.keys(hist.spreads)) {
+    hist.spreads[coin] = hist.spreads[coin].filter((p) => p[0] >= now - WINDOW_MS);
+    if (!hist.spreads[coin].length) delete hist.spreads[coin];
   }
 
   // ── Opportunity alerts ──────────────────────────────────────────────

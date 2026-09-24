@@ -220,7 +220,7 @@ import Layout from '../layouts/Layout.astro';
 
 <script is:inline>
 const REFRESH_SEC = 10;
-let rows = [], timer = null, autoOn = true, cd = REFRESH_SEC, view = 'table', hist = {};
+let rows = [], timer = null, autoOn = true, cd = REFRESH_SEC, view = 'table', hist = {}, spreadHist = {};
 const openDetails = new Set();   // coins whose detail panel is expanded (persist across refresh)
 const MIN_HIST = 24;             // min hourly snapshots before consistency is shown as reliable
 let alertThr = 0, prevAlerted = new Set(), audioCtx = null;   // browser opportunity alerts
@@ -376,6 +376,16 @@ function histStats(coin){
   const avg7=mean(d7), sd=Math.sqrt(mean(d7.map(x=>(x-avg7)**2)));
   const cv=Math.abs(avg7)>1?sd/Math.abs(avg7):9;              // coefficient of variation
   return {avg24:d1.length?mean(d1):null, avg7, cons:cv<0.3?'high':cv<0.7?'med':'low', n:pts.length};
+}
+
+// Entry-spread history → is the price gap between the two legs shrinking (recoverable) or widening (trap)?
+function spreadStats(coin){
+  const pts=spreadHist[coin]||[]; if(pts.length<2) return null;
+  const now=Date.now(), mean=a=>a.reduce((s,x)=>s+x,0)/a.length, mag=a=>a.reduce((s,x)=>s+Math.abs(x),0)/a.length;
+  const d1=pts.filter(p=>p[0]>=now-864e5).map(p=>p[1]), d7=pts.map(p=>p[1]);
+  const m1=d1.length?mag(d1):mag(d7), m7=mag(d7);
+  const trend=m1<m7*0.85?'converging':m1>m7*1.15?'widening':'stable';
+  return {avg24:d1.length?mean(d1):mean(d7), avg7:mean(d7), trend, n:pts.length};
 }
 
 function passFilters(r){
@@ -544,6 +554,15 @@ function buildDetail(r){
       return `<div class="mt-2 pt-2 border-t border-gray-800">
         <div class="text-gray-500 mb-1">${T('Net APR history (all DEXs)','Historial de APR neto (todos los DEXs)')}</div>
         <div>24h: <span class="font-mono text-gray-200">${h.avg24!=null?(h.avg24>=0?'+':'')+h.avg24.toFixed(1)+'%':'—'}</span> · 7d: <span class="font-mono text-gray-200">${h.avg7>=0?'+':''}${h.avg7.toFixed(1)}%</span> · ${T('consistency','consistencia')}: <span class="${col} font-semibold">${lbl}</span> <span class="text-gray-600">(${h.n} ${T('samples','muestras')})</span></div>
+      </div>`; })()}
+    ${(() => { const sp=spreadStats(r.coin); if(!sp) return '';
+      const tl={converging:T('converging ↓','convergiendo ↓'),widening:T('widening ↑','ampliándose ↑'),stable:T('stable →','estable →')}[sp.trend];
+      const tc={converging:'text-green-400',widening:'text-red-400',stable:'text-gray-400'}[sp.trend];
+      const building=sp.n<MIN_HIST?` <span class="text-gray-600">(${T('building','creando')} ${sp.n}/${MIN_HIST})</span>`:'';
+      return `<div class="mt-2 pt-2 border-t border-gray-800">
+        <div class="text-gray-500 mb-1">${T('Entry-spread history','Historial de spread de entrada')}</div>
+        <div>24h: <span class="font-mono text-gray-200">${(sp.avg24>=0?'+':'')+sp.avg24.toFixed(2)}%</span> · 7d: <span class="font-mono text-gray-200">${(sp.avg7>=0?'+':'')+sp.avg7.toFixed(2)}%</span> · <span class="${tc} font-semibold">${tl}</span>${building}</div>
+        <div class="text-gray-600 mt-0.5">${T('Converging = the price gap is shrinking, so the entry cost tends to be recovered.','Convergiendo = la brecha de precio se achica, el costo de entrada tiende a recuperarse.')}</div>
       </div>`; })()}
   </div>`;
 }
@@ -730,7 +749,7 @@ async function load(){
   settled.forEach(s=>{ if(s.status!=='fulfilled') return; Array.isArray(s.value)?sources.push(...s.value):sources.push(s.value); });
   const live=sources.filter(s=>s.data&&Object.keys(s.data).length).length;
   $('stat-sources').textContent=`${live}/${Object.keys(EX).length}`;
-  try{ const hr=await fetch('/history.json',{cache:'no-store'}); if(hr.ok){ hist=(await hr.json()).points||{}; } }catch{}
+  try{ const hr=await fetch('/history.json',{cache:'no-store'}); if(hr.ok){ const h=await hr.json(); hist=h.points||{}; spreadHist=h.spreads||{}; } }catch{}
   rows=buildRows(sources);
   render();
   if(alertThr){ if(!window._alertsReady){ primeAlerts(); window._alertsReady=true; } else checkAlerts(); }
