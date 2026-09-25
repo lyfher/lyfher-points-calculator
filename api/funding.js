@@ -126,22 +126,44 @@ async function fetchParadex() {
   return out;
 }
 
+async function fetchOndo() {
+  const r = await fetch("https://api.ondoperps.xyz/v1/perps/contracts");
+  if (!r.ok) throw new Error("ondo " + r.status);
+  const arr = (await j(r)).result || [];
+  const out = [];
+  for (const m of arr) {                                 // RWA/stocks/ETF/commodity perps + some crypto
+    if (m.disabled || m.isClosed) continue;
+    const f = num(m.fundingRate);                        // per 3h interval (8 divisions/day)
+    if (f == null) continue;
+    out.push({
+      coin: normCoin(m.market),
+      apr: f * 8 * 365 * 100,
+      px: num(m.indexPrice) ?? num(m.lastPrice),
+      oiUsd: num(m.openInterestUsd),
+      volUsd: num(m.usdVolume),
+    });
+  }
+  return out;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=60");
-  const [ext, rise, tx, aster, para] = await Promise.allSettled([fetchExtended(), fetchRiseX(), fetchTxflow(), fetchAster(), fetchParadex()]);
+  const [ext, rise, tx, aster, para, ondo] = await Promise.allSettled([fetchExtended(), fetchRiseX(), fetchTxflow(), fetchAster(), fetchParadex(), fetchOndo()]);
   res.status(200).json({
     extended: ext.status === "fulfilled" ? ext.value : null,
     risex: rise.status === "fulfilled" ? rise.value : null,
     txflow: tx.status === "fulfilled" ? tx.value : null,
     aster: aster.status === "fulfilled" ? aster.value : null,
     paradex: para.status === "fulfilled" ? para.value : null,
+    ondo: ondo.status === "fulfilled" ? ondo.value : null,
     errors: {
       extended: ext.status === "rejected" ? String(ext.reason) : null,
       risex: rise.status === "rejected" ? String(rise.reason) : null,
       txflow: tx.status === "rejected" ? String(tx.reason) : null,
       aster: aster.status === "rejected" ? String(aster.reason) : null,
       paradex: para.status === "rejected" ? String(para.reason) : null,
+      ondo: ondo.status === "rejected" ? String(ondo.reason) : null,
     },
   });
 }

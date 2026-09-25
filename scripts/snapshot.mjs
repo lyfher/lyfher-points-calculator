@@ -107,6 +107,13 @@ async function fetchParadex() {
     if (f != null && px != null) out[normCoin(m.symbol)] = { apr: f * 3 * 365 * 100, px, oiUsd: oi != null ? oi * px : null }; }
   return out;
 }
+async function fetchOndo() {
+  const arr = (await fetch("https://api.ondoperps.xyz/v1/perps/contracts").then(j)).result || [];
+  const out = {};
+  for (const m of arr) { if (m.disabled || m.isClosed) continue; const f = num(m.fundingRate);  // per 3h interval, 8/day
+    if (f != null) out[normCoin(m.market)] = { apr: f * 8 * 365 * 100, px: num(m.indexPrice) ?? num(m.lastPrice), oiUsd: num(m.openInterestUsd) }; }
+  return out;
+}
 
 const SOURCES = [
   ["Hyperliquid", fetchHL],
@@ -120,6 +127,7 @@ const SOURCES = [
   ["TxFlow", fetchTxflow],
   ["Aster", fetchAster],
   ["Paradex", fetchParadex],
+  ["Ondo", fetchOndo],
 ];
 
 async function sendTelegram(text) {
