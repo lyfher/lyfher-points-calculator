@@ -11,9 +11,9 @@ import Layout from '../layouts/Layout.astro';
     <span class="text-green-400"> Scanner</span>
   </h1>
   <p class="text-gray-400 text-base max-w-2xl mx-auto"
-     data-en="Live funding across decentralized perp DEXs. Long where they pay you, short where you pay, stay neutral to price and farm the funding spread — filtered for real depth."
-     data-es="Funding en vivo en perp DEXs descentralizados. Ve largo donde te pagan, corto donde pagas, mantente neutral al precio y farmea el spread — filtrado por profundidad real.">
-    Live funding across decentralized perp DEXs — filtered for real depth.
+     data-en="Live funding across 12 perp DEXs. Go long where they pay you, short where you pay — stay neutral to price and farm the spread. Filtered for real liquidity."
+     data-es="Funding en vivo en 12 perp DEXs. Ve largo donde te pagan, corto donde pagas — mantente neutral al precio y farmea el spread. Filtrado por liquidez real.">
+    Live funding across 12 perp DEXs — farm the delta-neutral spread, filtered for real liquidity.
   </p>
 </section>
 
@@ -344,15 +344,16 @@ function deriveRow(row){
   if(legs.length<2) return null;
   const long=legs[0], short=legs[legs.length-1];   // long lowest apr, short highest
   const netAPR=short.apr-long.apr;
-  let spread=null;                                  // signed entry spread: long px vs short px
+  let spread=null, spreadNote=null;                 // signed entry spread: long px vs short px
   if(long.px&&short.px){
     const s=((long.px-short.px)/short.px)*100;
-    spread=Math.abs(s)>25?null:s;                   // >25% = contract-size mismatch (e.g. US500 full vs US500 mini), not a real entry spread → suppress
-  }
+    if(Math.abs(s)>25) spreadNote='mismatch';       // >25% = the two venues price it very differently (diff contract / dead market) → not a clean pair
+    else spread=s;
+  } else spreadNote='nofeed';                        // a leg has no price feed
   const legDepth=[long.oiUsd,short.oiUsd].filter(v=>v!=null);
   const allD=legs.map(l=>l.oiUsd).filter(v=>v!=null);
   const depth=legDepth.length?Math.min(...legDepth):(allD.length?Math.max(...allD):null);
-  return {coin:row.coin, legs, long, short, netAPR, spread, depth, sources:legs.length};
+  return {coin:row.coin, legs, long, short, netAPR, spread, spreadNote, depth, sources:legs.length};
 }
 
 // ─── Render ─────────────────────────────────────────────────────────────
@@ -519,7 +520,9 @@ function tradeMath(r){
   const cap=capital(); if(!cap) return '';
   const yr=r.netAPR/100*cap, daily=yr/365, sp=r.spread;
   let entryLine, beLine='';
-  if(sp==null){ entryLine=T('Entry spread: no price feed.','Spread de entrada: sin precio.'); }
+  if(sp==null){ entryLine = r.spreadNote==='mismatch'
+      ? T('Entry spread: venues price this >25% apart — likely different contracts, skip.','Spread de entrada: los venues lo valoran con >25% de diferencia — probablemente contratos distintos, evítalo.')
+      : T('Entry spread: no price feed.','Spread de entrada: sin precio.'); }
   else {
     const entry=sp/100*cap;  // + = cost, − = credit
     if(sp<0){
@@ -572,7 +575,9 @@ function tipHtml(r){
   const l=(EX[r.long.ex]||{}).short, s=(EX[r.short.ex]||{}).short;
   const sp=r.spread;
   let spLine;
-  if(sp==null) spLine=T('Entry: no price feed to check.','Entrada: sin precio para verificar.');
+  if(sp==null) spLine = r.spreadNote==='mismatch'
+    ? T('Entry: venues price this >25% apart — likely different contracts.','Entrada: los venues lo valoran con >25% de diferencia — probablemente contratos distintos.')
+    : T('Entry: no price feed to check.','Entrada: sin precio para verificar.');
   else if(sp<0) spLine=T(`Entry pays you ${Math.abs(sp).toFixed(2)}% — you open at a credit, then farm funding.`,`La entrada te paga ${Math.abs(sp).toFixed(2)}% — abres con crédito y farmeas.`);
   else if(sp<=0.05) spLine=T('Cheap entry — start flat, farm the funding.','Entrada barata — empiezas a la par y farmeas.');
   else spLine=T(`Entry costs ${sp.toFixed(2)}% — recovered by funding if it holds.`,`Entrada cuesta ${sp.toFixed(2)}% — se recupera con el funding si se mantiene.`);
