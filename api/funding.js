@@ -135,10 +135,12 @@ async function fetchOndo() {
     if (m.disabled || m.isClosed) continue;
     const f = num(m.fundingRate);                        // per 3h interval (8 divisions/day)
     if (f == null) continue;
+    const bid = num(m.bid), ask = num(m.ask);
     out.push({
       coin: normCoin(m.market),
       apr: f * 8 * 365 * 100,
-      px: num(m.indexPrice) ?? num(m.lastPrice),
+      // use the perp mark (mid of bid/ask, else last) not indexPrice — index lags mark during fast moves and skews cross-venue spread
+      px: (bid != null && ask != null) ? (bid + ask) / 2 : (num(m.lastPrice) ?? num(m.indexPrice)),
       oiUsd: num(m.openInterestUsd),
       volUsd: num(m.usdVolume),
     });
