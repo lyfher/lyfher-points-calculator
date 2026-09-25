@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Analytics from '@vercel/analytics/astro';
 
 interface Props {
   title: string;
@@ -85,6 +86,7 @@ const { title, description = "DeFi points calculators. Maximize your airdrop rew
         </span>
       </div>
     </footer>
+    <Analytics />
   </body>
 </html>
 
