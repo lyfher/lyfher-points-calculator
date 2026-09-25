@@ -305,7 +305,9 @@ async function fetchVariational(){
   const r=await fetch('https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats');
   if(!r.ok) throw 0; const j=await r.json(); const out={};
   // Variational's funding_rate is already an annualized fraction → APR% = f*100
-  (j.listings||[]).forEach(x=>{ const f=parseFloat(x.funding_rate); const px=parseFloat(x.mark_price);
+  (j.listings||[]).forEach(x=>{ const f=parseFloat(x.funding_rate);
+    const b=parseFloat(x.quotes?.base?.bid), a=parseFloat(x.quotes?.base?.ask);
+    const px=(!isNaN(b)&&!isNaN(a))?(b+a)/2:parseFloat(x.mark_price);   // quotes mid is fresh; mark_price lags during fast moves
     if(!isNaN(f)){ const oi=parseFloat(x.open_interest?.long_open_interest); out[normCoin(x.ticker)]={apr:f*100,px,oiUsd:!isNaN(oi)&&px?oi*px:null,volUsd:parseFloat(x.volume_24h)||null}; } });
   return {ex:'Variational',data:out};
 }

@@ -52,7 +52,9 @@ async function fetchPacifica() {
 }
 async function fetchVariational() {
   const r = await fetch("https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats"); const d = await j(r); const out = {};
-  (d.listings || []).forEach((x) => { const f = num(x.funding_rate), px = num(x.mark_price), oi = num(x.open_interest?.long_open_interest);
+  (d.listings || []).forEach((x) => { const f = num(x.funding_rate), oi = num(x.open_interest?.long_open_interest);
+    const b = num(x.quotes?.base?.bid), a = num(x.quotes?.base?.ask);
+    const px = (b != null && a != null) ? (b + a) / 2 : num(x.mark_price);   // quotes mid is fresh; mark_price lags
     if (f != null) out[normCoin(x.ticker)] = { apr: f * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
