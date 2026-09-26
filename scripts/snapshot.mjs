@@ -91,16 +91,20 @@ async function fetchTxflow() {
 }
 
 async function fetchAster() {
-  const arr = await fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex").then(j);
+  const [arr, fi] = await Promise.all([
+    fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex").then(j),
+    fetch("https://fapi.asterdex.com/fapi/v1/fundingInfo").then(j).catch(() => []),
+  ]);
+  const ivH = {}; for (const x of (Array.isArray(fi) ? fi : [])) { const h = num(x.fundingIntervalHours); if (h) ivH[x.symbol] = h; }  // per-market interval (4h/8h)
   const bySym = {};
   for (const m of arr) { const f = num(m.lastFundingRate), px = num(m.markPrice); if (f == null || px == null) continue;
-    const coin = normCoin(m.symbol); if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, apr: f * 3 * 365 * 100, px }; }
+    const coin = normCoin(m.symbol); if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, f, px }; }
   const oi = {};
   await Promise.allSettled(TXFLOW_MAJORS.filter((c) => bySym[c]).map(async (c) => {
     const rr = await fetch("https://fapi.asterdex.com/fapi/v1/openInterest?symbol=" + bySym[c].sym);
     if (rr.ok) { const o = num((await rr.json()).openInterest); if (o != null) oi[c] = o * bySym[c].px; }
   }));
-  const out = {}; for (const [coin, v] of Object.entries(bySym)) out[coin] = { apr: v.apr, px: v.px, oiUsd: oi[coin] ?? null }; return out;
+  const out = {}; for (const [coin, v] of Object.entries(bySym)) { const h = ivH[v.sym] || 8; out[coin] = { apr: v.f * (24 / h) * 365 * 100, px: v.px, oiUsd: oi[coin] ?? null }; } return out;
 }
 async function fetchParadex() {
   const res = (await fetch("https://api.prod.paradex.trade/v1/markets/summary?market=ALL").then(j)).results || [];

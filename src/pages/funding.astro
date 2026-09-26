@@ -324,7 +324,7 @@ async function fetchProxy(){
   if(!r.ok) throw 0; const j=await r.json(); const res=[];
   [['Extended',j.extended],['RiseX',j.risex],['TxFlow',j.txflow],['Aster',j.aster],['Paradex',j.paradex],['Ondo',j.ondo]].forEach(([ex,arr])=>{
     if(!arr) return; const out={};
-    arr.forEach(x=>{ if(x.apr==null) return; out[normCoin(x.coin)]={apr:x.apr,px:x.px,oiUsd:x.oiUsd,volUsd:x.volUsd}; });
+    arr.forEach(x=>{ if(x.apr==null) return; out[normCoin(x.coin)]={apr:x.apr,px:x.px,oiUsd:x.oiUsd,volUsd:x.volUsd,intervalH:x.intervalH}; });
     res.push({ex,data:out});
   });
   return res;
@@ -513,7 +513,7 @@ function legLine(l, role, coin){
   const u=dexUrl(l.ex, coin);
   const name=u?`<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:underline" style="color:${m.color}">${m.short} ↗</a>`:`<span style="color:${m.color}">${m.short}</span>`;
   return `<div class="flex items-center justify-between gap-3 py-0.5">
-    <span><span style="color:${m.color}">●</span> ${name} <span class="text-gray-600">(${m.interval})</span> ${tag?`<span class="${c} font-semibold">${tag}</span>`:''}</span>
+    <span><span style="color:${m.color}">●</span> ${name} <span class="text-gray-600">(${l.intervalH?l.intervalH+'h':m.interval})</span> ${tag?`<span class="${c} font-semibold">${tag}</span>`:''}</span>
     <span class="font-mono ${l.apr>=0?'text-green-400':'text-red-400'}">${l.apr>=0?'+':''}${l.apr.toFixed(1)}%</span>
   </div>`;
 }

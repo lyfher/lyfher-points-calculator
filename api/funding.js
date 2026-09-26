@@ -93,15 +93,20 @@ async function fetchTxflow() {
 }
 
 async function fetchAster() {
-  const r = await fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex");
+  const [r, fiRes] = await Promise.all([
+    fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex"),
+    fetch("https://fapi.asterdex.com/fapi/v1/fundingInfo").catch(() => null),
+  ]);
   if (!r.ok) throw new Error("aster " + r.status);
   const arr = await j(r);
-  const bySym = {};                       // normCoin -> { sym, apr, px }
+  const ivH = {};                         // symbol -> funding interval hours (Aster varies per market: 4h or 8h)
+  if (fiRes && fiRes.ok) { for (const x of await j(fiRes)) { const h = num(x.fundingIntervalHours); if (h) ivH[x.symbol] = h; } }
+  const bySym = {};                       // normCoin -> { sym, f, px }
   for (const m of arr) {
     const f = num(m.lastFundingRate), px = num(m.markPrice);
     if (f == null || px == null) continue;
     const coin = normCoin(m.symbol);
-    if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, apr: f * 3 * 365 * 100, px };  // 8h funding fraction; prefer USDT pair
+    if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, f, px };  // funding fraction per interval; prefer USDT pair
   }
   const majors = TXFLOW_MAJORS.filter((c) => bySym[c]);
   const oi = {};
@@ -109,7 +114,10 @@ async function fetchAster() {
     const rr = await fetch("https://fapi.asterdex.com/fapi/v1/openInterest?symbol=" + bySym[c].sym);
     if (rr.ok) { const o = num((await rr.json()).openInterest); if (o != null) oi[c] = o * bySym[c].px; }
   }));
-  return Object.entries(bySym).map(([coin, v]) => ({ coin, apr: v.apr, px: v.px, oiUsd: oi[coin] ?? null, volUsd: null }));
+  return Object.entries(bySym).map(([coin, v]) => {
+    const h = ivH[v.sym] || 8;            // annualize by the market's real interval (default 8h), not a fixed 3/day
+    return { coin, apr: v.f * (24 / h) * 365 * 100, px: v.px, oiUsd: oi[coin] ?? null, volUsd: null, intervalH: h };
+  });
 }
 
 async function fetchParadex() {
