@@ -308,7 +308,7 @@ async function fetchVariational(){
   (j.listings||[]).forEach(x=>{ const f=parseFloat(x.funding_rate);
     const b=parseFloat(x.quotes?.base?.bid), a=parseFloat(x.quotes?.base?.ask);
     const px=(!isNaN(b)&&!isNaN(a))?(b+a)/2:parseFloat(x.mark_price);   // quotes mid is fresh; mark_price lags during fast moves
-    if(!isNaN(f)){ const oi=parseFloat(x.open_interest?.long_open_interest); out[normCoin(x.ticker)]={apr:f*100,px,oiUsd:!isNaN(oi)&&px?oi*px:null,volUsd:parseFloat(x.volume_24h)||null}; } });
+    if(!isNaN(f)){ const oi=parseFloat(x.open_interest?.long_open_interest); const ivH=x.funding_interval_s?x.funding_interval_s/3600:null; out[normCoin(x.ticker)]={apr:f*100,px,oiUsd:!isNaN(oi)&&px?oi*px:null,volUsd:parseFloat(x.volume_24h)||null,intervalH:ivH}; } });
   return {ex:'Variational',data:out};
 }
 async function fetchArcus(){
