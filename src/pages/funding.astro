@@ -442,7 +442,7 @@ function renderTop(list){
       <div class="flex-1 min-w-0">
         <div class="flex items-center flex-wrap gap-x-3 gap-y-1.5 mb-2">
           <span class="text-xs font-bold uppercase tracking-widest text-green-400">🔥 ${T('Top pick','Top del momento')}</span>
-          <span class="text-lg font-bold text-white">${r.coin}</span>
+          <span class="text-lg font-bold text-white">${r.coin}${lumpyWarn(r)}</span>
           <span class="flex items-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</span>
         </div>
         <div class="flex items-baseline flex-wrap gap-x-4 gap-y-1">
@@ -460,6 +460,16 @@ function renderTop(list){
   card.addEventListener('mousemove',e=>{ tip.style.left=Math.min(e.clientX+14,window.innerWidth-260)+'px'; tip.style.top=(e.clientY+14)+'px'; });
   card.addEventListener('mouseleave',()=>tip.classList.add('hidden'));
 }
+
+// A leg's funding settlement interval in hours (per-market intervalH if known, else the EX map default)
+function legIvH(l){ return l.intervalH!=null?l.intervalH:(parseFloat((EX[l.ex]||{}).interval)||1); }
+// "Lumpy" = a leg settles every ≥4h → funding arrives in chunks, so open/close timing matters
+function rowLumpy(r){ return Math.max(legIvH(r.long),legIvH(r.short))>=4; }
+function lumpyWarn(r){ if(!rowLumpy(r)) return '';
+  const h=Math.max(legIvH(r.long),legIvH(r.short));
+  const tt=T('Lumpy funding: a leg pays every '+h+'h, not hourly. Funding only lands at the mark — check the countdown before opening/closing; short holds can miss or dodge it.',
+             'Funding en grumos: una pata paga cada '+h+'h, no cada hora. Solo cae en el mark — mira el countdown antes de abrir/cerrar; en holds cortos puedes perderlo o esquivarlo.');
+  return ' <span class="text-amber-400 cursor-help font-bold" title="'+tt+'">(!)</span>'; }
 
 function renderTable(){
   let show=getFiltered();
@@ -483,7 +493,7 @@ function renderTable(){
     const spreadCls=r.spread==null?'text-gray-600':r.spread<=0.05?'text-green-400':r.spread<=0.3?'text-yellow-500':'text-red-400';
     return `
     <tr class="row border-b border-gray-800/60 hover:bg-gray-800/40 transition-colors cursor-pointer" data-i="${i}">
-      <td class="px-4 py-3 font-bold text-white">${r.coin}</td>
+      <td class="px-4 py-3 font-bold text-white">${r.coin}${lumpyWarn(r)}</td>
       <td class="px-3 py-3">
         <div class="flex items-center justify-center gap-2">${badge(r.long.ex,'long')}<span class="text-gray-700">/</span>${badge(r.short.ex,'short')}</div>
       </td>
