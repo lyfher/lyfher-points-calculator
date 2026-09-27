@@ -42,7 +42,7 @@ async function fetchRiseX() {
   for (const m of mk) {
     if (m.active === false) continue;
     const f8 = num(m.funding_rate_8h);     // 8h rate
-    const px = num(m.last_price) ?? num(m.mark_price);  // no book in this endpoint → last real trade, not mark
+    const px = num(m.mark_price) ?? num(m.last_price);  // no book in API; mark tracks real price, last trade goes stale on thin markets
     if (f8 == null || px == null) continue;
     const oi = num(m.open_interest);       // base units
     out.push({
@@ -107,7 +107,7 @@ async function fetchAster() {
   if (btRes && btRes.ok) { for (const x of await j(btRes)) { const b = num(x.bidPrice), a = num(x.askPrice); if (b != null && a != null) mid[x.symbol] = (b + a) / 2; } }
   const bySym = {};                       // normCoin -> { sym, f, px }
   for (const m of arr) {
-    const f = num(m.lastFundingRate), px = mid[m.symbol] ?? num(m.markPrice);  // prefer book mid, mark only as fallback
+    const f = num(m.lastFundingRate), px = mid[m.symbol];  // require a real book mid; no book (e.g. phantom forex) → skip, its mark is stale/synthetic
     if (f == null || px == null) continue;
     const coin = normCoin(m.symbol);
     if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, f, px };  // funding fraction per interval; prefer USDT pair

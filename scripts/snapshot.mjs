@@ -39,7 +39,7 @@ async function fetchLighterHost(host) {
     fetch(host + "/api/v1/orderBookDetails").then((r) => r.ok ? r.json() : { order_book_details: [] }).catch(() => ({ order_book_details: [] })),
   ]);
   const oiMap = {}, pxMap = {};
-  (od.order_book_details || []).forEach((d) => { const p = num(d.last_trade_price) ?? num(d.mark_price), oi = num(d.open_interest); const c = normCoin(d.symbol); pxMap[c] = p; oiMap[c] = p != null && oi != null ? oi * p : null; });
+  (od.order_book_details || []).forEach((d) => { const p = num(d.mark_price) ?? num(d.last_trade_price), oi = num(d.open_interest); const c = normCoin(d.symbol); pxMap[c] = p; oiMap[c] = p != null && oi != null ? oi * p : null; });  // mark=index fresh; last trade stale on thin markets
   const out = {};
   (fr.funding_rates || []).forEach((x) => { if (x.exchange !== "lighter") return; const f = num(x.rate); const c = normCoin(x.symbol); if (f != null) out[c] = { apr: f * 3 * 365 * 100, px: pxMap[c] ?? null, oiUsd: oiMap[c] ?? null }; });
   return out;
@@ -60,7 +60,7 @@ async function fetchVariational() {
 }
 async function fetchArcus() {
   const r = await fetch("https://api.arcus.xyz/v1/markets"); const d = await j(r); const out = {};
-  (d.markets || []).forEach((x) => { if (x.category !== "CRYPTO" || x.status !== "ONLINE") return; const f = num(x.fundingRate), px = num(x.lastTradePrice) ?? num(x.markPrice), oi = num(x.openInterest);
+  (d.markets || []).forEach((x) => { if (x.category !== "CRYPTO" || x.status !== "ONLINE") return; const f = num(x.fundingRate), px = num(x.markPrice) ?? num(x.lastTradePrice), oi = num(x.openInterest);
     if (f != null) out[normCoin(x.baseAsset)] = { apr: f * 24 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
@@ -72,7 +72,7 @@ async function fetchExtended() {
 }
 async function fetchRiseX() {
   const r = await fetch("https://api.rise.trade/v1/markets"); const mk = (await j(r)).data?.markets || []; const out = {};
-  for (const m of mk) { if (m.active === false) continue; const f8 = num(m.funding_rate_8h), px = num(m.last_price) ?? num(m.mark_price), oi = num(m.open_interest);
+  for (const m of mk) { if (m.active === false) continue; const f8 = num(m.funding_rate_8h), px = num(m.mark_price) ?? num(m.last_price), oi = num(m.open_interest);
     if (f8 != null) out[normCoin((m.base_asset_symbol || m.display_name || "").split("/")[0])] = { apr: f8 * 3 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; }
   return out;
 }
@@ -99,7 +99,7 @@ async function fetchAster() {
   const ivH = {}; for (const x of (Array.isArray(fi) ? fi : [])) { const h = num(x.fundingIntervalHours); if (h) ivH[x.symbol] = h; }  // per-market interval (4h/8h)
   const mid = {}; for (const x of (Array.isArray(bt) ? bt : [])) { const b = num(x.bidPrice), a = num(x.askPrice); if (b != null && a != null) mid[x.symbol] = (b + a) / 2; }
   const bySym = {};
-  for (const m of arr) { const f = num(m.lastFundingRate), px = mid[m.symbol] ?? num(m.markPrice); if (f == null || px == null) continue;
+  for (const m of arr) { const f = num(m.lastFundingRate), px = mid[m.symbol]; if (f == null || px == null) continue;  // require real book mid; skip no-book phantom markets
     const coin = normCoin(m.symbol); if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, f, px }; }
   const oi = {};
   await Promise.allSettled(TXFLOW_MAJORS.filter((c) => bySym[c]).map(async (c) => {
