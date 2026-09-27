@@ -67,9 +67,9 @@ import Layout from '../layouts/Layout.astro';
     <label class="text-xs text-gray-500" data-en="Max spread" data-es="Spread máx">Max spread</label>
     <select id="max-spread" class="bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
       <option value="0.5">0.5%</option>
-      <option value="1" selected>1%</option>
+      <option value="1">1%</option>
       <option value="2">2%</option>
-      <option value="999">All</option>
+      <option value="999" selected>All</option>
     </select>
     <label class="text-xs text-gray-500" data-en="Min APR" data-es="APR mín">Min APR</label>
     <select id="min-apr" class="bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
@@ -475,7 +475,7 @@ function renderTable(){
   let show=getFiltered();
   show.sort((a,b)=>{ let av,bv;
     if(sortKey==='net'){av=a.netAPR;bv=b.netAPR;}
-    else if(sortKey==='spread'){av=a.spread??999;bv=b.spread??999;}
+    else if(sortKey==='spread'){av=a.spread==null?-1:Math.abs(a.spread);bv=b.spread==null?-1:Math.abs(b.spread);}  // by magnitude: fattest spread = biggest opportunity
     else if(sortKey==='depth'){av=a.depth??-1;bv=b.depth??-1;}
     else{av=a.sources;bv=b.sources;}
     return (av-bv)*sortDir; });
