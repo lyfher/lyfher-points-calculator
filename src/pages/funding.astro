@@ -510,7 +510,14 @@ function renderTable(){
           ? `${T('7d avg','prom 7d')} ${h.avg7>=0?'+':''}${h.avg7.toFixed(0)}% · ${T('consistency','consistencia')}: ${h.cons} · ${h.n} ${T('samples','muestras')}`
           : `${T('Building history','Creando historial')} ${h.n}/${MIN_HIST} — ${T('consistency not reliable yet','consistencia aún no confiable')}`;
         return `<td class="px-3 py-3 whitespace-nowrap" title="${tt}"><div class="flex justify-end">${sparkline(pts,col)}</div></td>`; })()}
-      <td class="px-3 py-3 text-right font-mono ${spreadCls}">${spreadTxt}</td>
+      <td class="px-3 py-3 text-right whitespace-nowrap">
+        <div class="font-mono ${spreadCls}">${spreadTxt}</div>
+        ${(() => { const sp=spreadHist[r.coin]||[]; if(sp.length<2) return '';
+          const st=spreadStats(r.coin); const vals=sp.map(p=>p[1]); const mn=Math.min(...vals), mx=Math.max(...vals);
+          const col=st&&st.trend==='converging'?'#22c55e':st&&st.trend==='widening'?'#ef4444':'#9ca3af';
+          const tt=`${T('7d spread','spread 7d')}: ${mn>=0?'+':''}${mn.toFixed(2)}% … ${mx>=0?'+':''}${mx.toFixed(2)}% · ${T('avg','prom')} ${st.avg7>=0?'+':''}${st.avg7.toFixed(2)}% · ${st.trend==='converging'?T('converging','convergiendo'):st.trend==='widening'?T('widening','ampliando'):T('stable','estable')} · ${sp.length} ${T('samples','muestras')}`;
+          return `<div class="flex justify-end mt-0.5" title="${tt}">${sparkline(sp,col)}</div>`; })()}
+      </td>
       <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-200'}">${fmtMoney(r.depth)}</td>
     </tr>
     <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="6" class="px-4 py-3"></td></tr>`;
