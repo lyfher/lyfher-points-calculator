@@ -272,7 +272,7 @@ function capital(){ const v=parseFloat($('capital').value); return isNaN(v)||v<0
 async function fetchHL(){
   const r=await fetch('https://api.hyperliquid.xyz/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'metaAndAssetCtxs'})});
   if(!r.ok) throw 0; const [meta,ctxs]=await r.json(); const out={};
-  meta.universe.forEach((u,i)=>{ const c=ctxs[i]||{}; const f=parseFloat(c.funding); const px=parseFloat(c.markPx);
+  meta.universe.forEach((u,i)=>{ const c=ctxs[i]||{}; const f=parseFloat(c.funding); const px=parseFloat(c.midPx)||parseFloat(c.markPx);
     if(!isNaN(f)) out[normCoin(u.name)]={apr:f*24*365*100,px,oiUsd:parseFloat(c.openInterest)*px||null,volUsd:parseFloat(c.dayNtlVlm)||null}; });
   return {ex:'Hyperliquid',data:out};
 }
@@ -284,7 +284,7 @@ async function fetchLighterHost(host, exName){
     fetch(host+'/api/v1/orderBookDetails').then(r=>r.ok?r.json():{order_book_details:[]}).catch(()=>({order_book_details:[]})),
   ]);
   const info={};
-  (od.order_book_details||[]).forEach(d=>{ const p=parseFloat(d.mark_price); const oi=parseFloat(d.open_interest);
+  (od.order_book_details||[]).forEach(d=>{ const p=parseFloat(d.last_trade_price)||parseFloat(d.mark_price); const oi=parseFloat(d.open_interest);
     info[normCoin(d.symbol)]={px:isNaN(p)?null:p, oiUsd:(!isNaN(oi)&&!isNaN(p))?oi*p:null, volUsd:parseFloat(d.daily_quote_token_volume)||null}; });
   const out={};
   // funding-rates normalizes every venue to an 8h rate → APR = f*3*365
@@ -297,7 +297,7 @@ const fetchLighterRH = () => fetchLighterHost('https://api.rh.lighter.xyz','Ligh
 async function fetchPacifica(){
   const r=await fetch('https://api.pacifica.fi/api/v1/info/prices');
   if(!r.ok) throw 0; const j=await r.json(); const out={};
-  (j.data||[]).forEach(x=>{ const f=parseFloat(x.funding); const px=parseFloat(x.mark);
+  (j.data||[]).forEach(x=>{ const f=parseFloat(x.funding); const px=parseFloat(x.mid)||parseFloat(x.mark);
     if(!isNaN(f)){ const oi=parseFloat(x.open_interest); out[normCoin(x.symbol)]={apr:f*24*365*100,px,oiUsd:!isNaN(oi)?oi*px:null,volUsd:parseFloat(x.volume_24h)*px||null}; } });
   return {ex:'Pacifica',data:out};
 }
@@ -314,7 +314,7 @@ async function fetchVariational(){
 async function fetchArcus(){
   const r=await fetch('https://api.arcus.xyz/v1/markets');
   if(!r.ok) throw 0; const j=await r.json(); const out={};
-  (j.markets||[]).forEach(x=>{ if(x.category!=='CRYPTO'||x.status!=='ONLINE') return; const f=parseFloat(x.fundingRate); const px=parseFloat(x.markPrice);
+  (j.markets||[]).forEach(x=>{ if(x.category!=='CRYPTO'||x.status!=='ONLINE') return; const f=parseFloat(x.fundingRate); const px=parseFloat(x.lastTradePrice)||parseFloat(x.markPrice);
     if(!isNaN(f)){ const oi=parseFloat(x.openInterest); out[normCoin(x.baseAsset)]={apr:f*24*365*100,px,oiUsd:!isNaN(oi)?oi*px:null,volUsd:parseFloat(x.volume24hNotional)||null}; } });
   return {ex:'Arcus',data:out};
 }

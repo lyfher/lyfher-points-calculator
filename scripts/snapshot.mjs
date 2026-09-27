@@ -29,7 +29,7 @@ const TXFLOW_MAJORS = [
 async function fetchHL() {
   const r = await fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "metaAndAssetCtxs" }) });
   const [meta, ctxs] = await j(r); const out = {};
-  meta.universe.forEach((u, i) => { const c = ctxs[i] || {}; const f = num(c.funding), px = num(c.markPx), oi = num(c.openInterest);
+  meta.universe.forEach((u, i) => { const c = ctxs[i] || {}; const f = num(c.funding), px = num(c.midPx) ?? num(c.markPx), oi = num(c.openInterest);
     if (f != null) out[normCoin(u.name)] = { apr: f * 24 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
@@ -39,14 +39,14 @@ async function fetchLighterHost(host) {
     fetch(host + "/api/v1/orderBookDetails").then((r) => r.ok ? r.json() : { order_book_details: [] }).catch(() => ({ order_book_details: [] })),
   ]);
   const oiMap = {}, pxMap = {};
-  (od.order_book_details || []).forEach((d) => { const p = num(d.mark_price), oi = num(d.open_interest); const c = normCoin(d.symbol); pxMap[c] = p; oiMap[c] = p != null && oi != null ? oi * p : null; });
+  (od.order_book_details || []).forEach((d) => { const p = num(d.last_trade_price) ?? num(d.mark_price), oi = num(d.open_interest); const c = normCoin(d.symbol); pxMap[c] = p; oiMap[c] = p != null && oi != null ? oi * p : null; });
   const out = {};
   (fr.funding_rates || []).forEach((x) => { if (x.exchange !== "lighter") return; const f = num(x.rate); const c = normCoin(x.symbol); if (f != null) out[c] = { apr: f * 3 * 365 * 100, px: pxMap[c] ?? null, oiUsd: oiMap[c] ?? null }; });
   return out;
 }
 async function fetchPacifica() {
   const r = await fetch("https://api.pacifica.fi/api/v1/info/prices"); const d = await j(r); const out = {};
-  (d.data || []).forEach((x) => { const f = num(x.funding), px = num(x.mark), oi = num(x.open_interest);
+  (d.data || []).forEach((x) => { const f = num(x.funding), px = num(x.mid) ?? num(x.mark), oi = num(x.open_interest);
     if (f != null) out[normCoin(x.symbol)] = { apr: f * 24 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
@@ -60,19 +60,19 @@ async function fetchVariational() {
 }
 async function fetchArcus() {
   const r = await fetch("https://api.arcus.xyz/v1/markets"); const d = await j(r); const out = {};
-  (d.markets || []).forEach((x) => { if (x.category !== "CRYPTO" || x.status !== "ONLINE") return; const f = num(x.fundingRate), px = num(x.markPrice), oi = num(x.openInterest);
+  (d.markets || []).forEach((x) => { if (x.category !== "CRYPTO" || x.status !== "ONLINE") return; const f = num(x.fundingRate), px = num(x.lastTradePrice) ?? num(x.markPrice), oi = num(x.openInterest);
     if (f != null) out[normCoin(x.baseAsset)] = { apr: f * 24 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; });
   return out;
 }
 async function fetchExtended() {
   const r = await fetch("https://api.starknet.extended.exchange/api/v1/info/markets"); const d = (await j(r)).data || []; const out = {};
   for (const m of d) { if (m.type !== "PERPETUAL" || m.status !== "ACTIVE") continue; const s = m.marketStats || {}; const f = num(s.fundingRate);
-    if (f != null) out[normCoin(m.name)] = { apr: f * 24 * 365 * 100, px: num(s.markPrice ?? s.lastPrice ?? s.indexPrice), oiUsd: num(s.openInterest) }; }
+    if (f != null) { const b = num(s.bidPrice), a = num(s.askPrice); out[normCoin(m.name)] = { apr: f * 24 * 365 * 100, px: (b != null && a != null) ? (b + a) / 2 : num(s.lastPrice ?? s.markPrice), oiUsd: num(s.openInterest) }; } }
   return out;
 }
 async function fetchRiseX() {
   const r = await fetch("https://api.rise.trade/v1/markets"); const mk = (await j(r)).data?.markets || []; const out = {};
-  for (const m of mk) { if (m.active === false) continue; const f8 = num(m.funding_rate_8h), px = num(m.mark_price), oi = num(m.open_interest);
+  for (const m of mk) { if (m.active === false) continue; const f8 = num(m.funding_rate_8h), px = num(m.last_price) ?? num(m.mark_price), oi = num(m.open_interest);
     if (f8 != null) out[normCoin((m.base_asset_symbol || m.display_name || "").split("/")[0])] = { apr: f8 * 3 * 365 * 100, px, oiUsd: oi != null && px != null ? oi * px : null }; }
   return out;
 }
@@ -84,20 +84,22 @@ async function fetchTxflow() {
   const out = {};
   await Promise.allSettled(Object.entries(bySym).map(async ([base, name]) => {
     const r = await fetch("https://api.txflow.com/info", { method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: name }) });
-    const c = await j(r); const n = c.nodeCtx || {}; const f = num(n.funding), px = num(n.markPx || n.oraclePx), oi = num(n.openInterest);
+    const c = await j(r); const n = c.nodeCtx || {}; const f = num(n.funding), px = num(n.midPx) ?? num(n.markPx || n.oraclePx), oi = num(n.openInterest);
     if (f != null) out[base] = { apr: f * 24 * 365, px, oiUsd: oi != null && px != null ? oi * px : null };  // funding already percent
   }));
   return out;
 }
 
 async function fetchAster() {
-  const [arr, fi] = await Promise.all([
+  const [arr, fi, bt] = await Promise.all([
     fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex").then(j),
     fetch("https://fapi.asterdex.com/fapi/v1/fundingInfo").then(j).catch(() => []),
+    fetch("https://fapi.asterdex.com/fapi/v1/ticker/bookTicker").then(j).catch(() => []),  // markPrice lags → book mid
   ]);
   const ivH = {}; for (const x of (Array.isArray(fi) ? fi : [])) { const h = num(x.fundingIntervalHours); if (h) ivH[x.symbol] = h; }  // per-market interval (4h/8h)
+  const mid = {}; for (const x of (Array.isArray(bt) ? bt : [])) { const b = num(x.bidPrice), a = num(x.askPrice); if (b != null && a != null) mid[x.symbol] = (b + a) / 2; }
   const bySym = {};
-  for (const m of arr) { const f = num(m.lastFundingRate), px = num(m.markPrice); if (f == null || px == null) continue;
+  for (const m of arr) { const f = num(m.lastFundingRate), px = mid[m.symbol] ?? num(m.markPrice); if (f == null || px == null) continue;
     const coin = normCoin(m.symbol); if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, f, px }; }
   const oi = {};
   await Promise.allSettled(TXFLOW_MAJORS.filter((c) => bySym[c]).map(async (c) => {

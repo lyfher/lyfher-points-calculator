@@ -22,10 +22,11 @@ async function fetchExtended() {
     const s = m.marketStats || {};
     const f = num(s.fundingRate);          // hourly rate
     if (f == null) continue;
+    const b = num(s.bidPrice), a = num(s.askPrice);
     out.push({
       coin: m.name.replace(/-USD$/, "").toUpperCase(),
       apr: f * 24 * 365 * 100,
-      px: num(s.markPrice),
+      px: (b != null && a != null) ? (b + a) / 2 : (num(s.lastPrice) ?? num(s.markPrice)),  // book mid, not lagging mark
       oiUsd: num(s.openInterest),          // already USD notional
       volUsd: num(s.dailyVolume),
     });
@@ -41,7 +42,7 @@ async function fetchRiseX() {
   for (const m of mk) {
     if (m.active === false) continue;
     const f8 = num(m.funding_rate_8h);     // 8h rate
-    const px = num(m.mark_price);
+    const px = num(m.last_price) ?? num(m.mark_price);  // no book in this endpoint → last real trade, not mark
     if (f8 == null || px == null) continue;
     const oi = num(m.open_interest);       // base units
     out.push({
@@ -77,7 +78,7 @@ async function fetchTxflow() {
       const c = await j(r);
       const n = c.nodeCtx || {};
       const f = num(n.funding);            // hourly rate, ALREADY in percent (e.g. 0.00125 = 0.00125%/h)
-      const px = num(n.markPx || n.oraclePx);
+      const px = num(n.midPx) ?? num(n.markPx || n.oraclePx);  // book mid, not lagging mark
       if (f == null || px == null) return null;
       const oi = num(n.openInterest);      // base units
       return {
@@ -93,17 +94,20 @@ async function fetchTxflow() {
 }
 
 async function fetchAster() {
-  const [r, fiRes] = await Promise.all([
+  const [r, fiRes, btRes] = await Promise.all([
     fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex"),
     fetch("https://fapi.asterdex.com/fapi/v1/fundingInfo").catch(() => null),
+    fetch("https://fapi.asterdex.com/fapi/v1/ticker/bookTicker").catch(() => null),  // Aster markPrice lags badly → use book mid
   ]);
   if (!r.ok) throw new Error("aster " + r.status);
   const arr = await j(r);
   const ivH = {};                         // symbol -> funding interval hours (Aster varies per market: 4h or 8h)
   if (fiRes && fiRes.ok) { for (const x of await j(fiRes)) { const h = num(x.fundingIntervalHours); if (h) ivH[x.symbol] = h; } }
+  const mid = {};                         // symbol -> book mid
+  if (btRes && btRes.ok) { for (const x of await j(btRes)) { const b = num(x.bidPrice), a = num(x.askPrice); if (b != null && a != null) mid[x.symbol] = (b + a) / 2; } }
   const bySym = {};                       // normCoin -> { sym, f, px }
   for (const m of arr) {
-    const f = num(m.lastFundingRate), px = num(m.markPrice);
+    const f = num(m.lastFundingRate), px = mid[m.symbol] ?? num(m.markPrice);  // prefer book mid, mark only as fallback
     if (f == null || px == null) continue;
     const coin = normCoin(m.symbol);
     if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, f, px };  // funding fraction per interval; prefer USDT pair
