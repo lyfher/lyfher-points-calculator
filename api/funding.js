@@ -63,16 +63,11 @@ async function fetchTxflow() {
   });
   if (!mr.ok) throw new Error("txflow meta " + mr.status);
   const uni = (await j(mr)).universe || [];
-  const bySym = {};
-  for (const u of uni) {
-    if (u.delisted || u.haltTrading) continue;
-    const base = (u.baseCurrency || "").toUpperCase();
-    if (TXFLOW_MAJORS.includes(base) && !bySym[base]) bySym[base] = u.name;
-  }
+  const active = uni.filter((u) => u.name && !u.delisted && !u.haltTrading);  // fetch every listed market, not a majors whitelist, so new listings (memes, etc.) show up
   const entries = await Promise.allSettled(
-    Object.entries(bySym).map(async ([base, name]) => {
+    active.map(async (u) => {
       const r = await fetch("https://api.txflow.com/info", {
-        method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: name }),
+        method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: u.name }),
       });
       if (!r.ok) throw new Error("txflow ctx " + r.status);
       const c = await j(r);
@@ -82,7 +77,7 @@ async function fetchTxflow() {
       if (f == null || px == null) return null;
       const oi = num(n.openInterest);      // base units
       return {
-        coin: base,
+        coin: normCoin(u.baseCurrency || u.name),
         apr: f * 24 * 365,                 // percent already → no extra *100
         px,
         oiUsd: oi != null ? oi * px : null,

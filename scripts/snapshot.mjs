@@ -79,13 +79,13 @@ async function fetchRiseX() {
 async function fetchTxflow() {
   const H = { "Content-Type": "application/json", "Origin": "https://app.txflow.com" };
   const mr = await fetch("https://api.txflow.com/info", { method: "POST", headers: H, body: JSON.stringify({ type: "perpMeta" }) });
-  const uni = (await j(mr)).universe || []; const bySym = {};
-  for (const u of uni) { if (u.delisted || u.haltTrading) continue; const base = (u.baseCurrency || "").toUpperCase(); if (TXFLOW_MAJORS.includes(base) && !bySym[base]) bySym[base] = u.name; }
+  const uni = (await j(mr)).universe || [];
+  const active = uni.filter((u) => u.name && !u.delisted && !u.haltTrading);  // every listed market, not a majors whitelist
   const out = {};
-  await Promise.allSettled(Object.entries(bySym).map(async ([base, name]) => {
-    const r = await fetch("https://api.txflow.com/info", { method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: name }) });
+  await Promise.allSettled(active.map(async (u) => {
+    const r = await fetch("https://api.txflow.com/info", { method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: u.name }) });
     const c = await j(r); const n = c.nodeCtx || {}; const f = num(n.funding), px = num(n.midPx) ?? num(n.markPx || n.oraclePx), oi = num(n.openInterest);
-    if (f != null) out[base] = { apr: f * 24 * 365, px, oiUsd: oi != null && px != null ? oi * px : null };  // funding already percent
+    if (f != null) out[normCoin(u.baseCurrency || u.name)] = { apr: f * 24 * 365, px, oiUsd: oi != null && px != null ? oi * px : null };  // funding already percent
   }));
   return out;
 }
