@@ -56,8 +56,12 @@ import Layout from '../layouts/Layout.astro';
     </div>
     <img id="share-img" class="w-full rounded-xl border border-gray-800" alt="Pointfolio card"/>
     <div class="flex items-center gap-2 mt-3 flex-wrap">
-      <button id="dl" class="flex-1 min-w-32 text-center text-sm font-semibold px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white transition-colors" data-en="⬇ Download PNG" data-es="⬇ Descargar PNG">⬇ Download PNG</button>
-      <button id="cp" class="flex-1 min-w-32 text-center text-sm font-semibold px-3 py-2 rounded-lg border border-gray-700 hover:border-green-500 text-gray-200 transition-colors" data-en="⧉ Copy image" data-es="⧉ Copiar imagen">⧉ Copy image</button>
+      <button id="dl" class="flex-1 min-w-32 inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white transition-colors">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span data-en="Download PNG" data-es="Descargar PNG">Download PNG</span></button>
+      <button id="cp" class="flex-1 min-w-32 inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-lg border border-gray-700 hover:border-green-500 text-gray-200 transition-colors">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        <span data-en="Copy image" data-es="Copiar imagen">Copy image</span></button>
       <a id="tw" target="_blank" rel="noopener noreferrer" class="flex-1 min-w-32 text-center text-sm font-semibold px-3 py-2 rounded-lg border border-sky-500/50 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 transition-colors" data-en="𝕏 Post on X" data-es="𝕏 Postear en X">𝕏 Post on X</a>
     </div>
     <p id="cp-note" class="text-xs text-gray-500 mt-2 text-center"></p>
@@ -212,9 +216,9 @@ function recompute(){
     const s=stateOf(p.key); const card=document.querySelector(`.pcard[data-k="${CSS.escape(p.key)}"]`);
     const v=rowValue(p, s);
     if(s.on){ tb+=v.bear; tm+=v.base; tu+=v.bull; }
-    if(card){ const el=card.querySelector('.pval');
-      el.textContent = s.on && num(s.pts)>0 ? `${money(v.bear)} · ${money(v.base)} · ${money(v.bull)}` : '—';
-      el.className = `pval mt-2 font-mono ${s.on&&num(s.pts)>0?'text-gray-300':'text-gray-600'}`; }
+    if(card){ const el=card.querySelector('.pval'); const hasPts=num(s.pts)>0;
+      el.textContent = hasPts ? `${money(v.bear)} · ${money(v.base)} · ${money(v.bull)}` : '—';
+      el.className = `pval mt-2 font-mono ${hasPts ? (s.on?'text-gray-300':'text-gray-500') : 'text-gray-600'}`; }
   });
   document.getElementById('tot-bear').textContent = money(tb);
   document.getElementById('tot-base').textContent = money(tm);
