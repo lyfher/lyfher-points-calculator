@@ -29,8 +29,8 @@ const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label,
   <div class="grid gap-3 sm:grid-cols-2 mb-6">
     {filteredProjects.map((project) => (
       <div
-        class="flex items-center gap-4 rounded-2xl p-4 border"
-        style={`border-color: ${project.accentHex}30; background: ${project.accentHex}0e`}
+        class="glow-card flex items-center gap-4 rounded-2xl p-4 border"
+        style={`--c:${project.accentHex}; border-color: ${project.accentHex}30; background: ${project.accentHex}0e`}
       >
         <ProjectLogo logoSrc={project.logoSrc} logoEmoji={project.logoEmoji} name={project.name} size="md" />
         <div class="flex-1">

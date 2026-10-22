@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+/* ── Shared glow / hover polish (used site-wide) ───────────────────────── */
+.ambient-glow{
+  position:absolute; left:50%; top:34%; width:min(640px,92%); height:240px;
+  transform:translate(-50%,-50%); pointer-events:none; z-index:0;
+  background:radial-gradient(50% 50% at 50% 50%, rgba(34,197,94,0.16), transparent 70%);
+  filter:blur(16px);
+}
+.lift-card{ transition:transform .18s ease, border-color .2s ease, box-shadow .28s ease; }
+.lift-card:hover{
+  transform:translateY(-3px); border-color:#2b3a49;
+  box-shadow:0 14px 40px -16px rgba(34,197,94,0.35);
+}
+/* colored variant: set --c on the element */
+.glow-card{ transition:transform .2s ease, border-color .2s ease, box-shadow .3s ease; }
+.glow-card:hover{
+  transform:translateY(-3px);
+  border-color:color-mix(in srgb, var(--c,#22c55e) 55%, #1f2a35);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--c,#22c55e) 20%, transparent),
+             0 14px 44px -14px color-mix(in srgb, var(--c,#22c55e) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .lift-card, .glow-card{ transition:none; }
+  .lift-card:hover, .glow-card:hover{ transform:none; }
+}

@@ -5,12 +5,13 @@ import Layout from '../layouts/Layout.astro';
 <Layout title="Lyfher — Delta-Neutral Funding Scanner" description="Live funding rates across decentralized perp DEXs to spot delta-neutral farming opportunities and capture the spread.">
 
 <!-- Hero -->
-<section class="text-center py-8">
-  <h1 class="text-4xl sm:text-5xl font-bold text-white mb-3">
+<section class="relative text-center py-8">
+  <div class="ambient-glow"></div>
+  <h1 class="relative text-4xl sm:text-5xl font-bold text-white mb-3">
     <span data-en="Delta-Neutral" data-es="Delta-Neutral">Delta-Neutral</span>
     <span class="text-green-400"> Scanner</span>
   </h1>
-  <p class="text-gray-400 text-base max-w-2xl mx-auto"
+  <p class="relative text-gray-400 text-base max-w-2xl mx-auto"
      data-en="Live funding across 12 perp DEXs. Go long where they pay you, short where you pay — stay neutral to price and farm the spread. Filtered for real liquidity."
      data-es="Funding en vivo en 12 perp DEXs. Ve largo donde te pagan, corto donde pagas — mantente neutral al precio y farmea el spread. Filtrado por liquidez real.">
     Live funding across 12 perp DEXs — farm the delta-neutral spread, filtered for real liquidity.
@@ -19,19 +20,19 @@ import Layout from '../layouts/Layout.astro';
 
 <!-- Stats -->
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-  <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+  <div class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
     <div id="stat-ops" class="text-2xl font-bold text-green-400">—</div>
     <div class="text-xs text-gray-500 mt-0.5" data-en="Opportunities" data-es="Oportunidades">Opportunities</div>
   </div>
-  <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+  <div class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
     <div id="stat-best" class="text-2xl font-bold text-emerald-400">—</div>
     <div class="text-xs text-gray-500 mt-0.5" data-en="Best net APR" data-es="Mejor APR neto">Best net APR</div>
   </div>
-  <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+  <div class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
     <div id="stat-sources" class="text-2xl font-bold text-blue-400">—</div>
     <div class="text-xs text-gray-500 mt-0.5" data-en="Exchanges live" data-es="Exchanges activos">Exchanges live</div>
   </div>
-  <div id="autorefresh-toggle" class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center cursor-pointer select-none">
+  <div id="autorefresh-toggle" class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center cursor-pointer select-none">
     <div id="stat-refresh" class="text-2xl font-bold text-yellow-400">10s</div>
     <div class="text-xs text-gray-500 mt-0.5" data-en="Auto-refresh" data-es="Auto-actualizar">Auto-refresh</div>
   </div>
