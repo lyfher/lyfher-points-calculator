@@ -251,11 +251,13 @@ const EX = {
 };
 const isEst = name => EX[name] && EX[name].tier === 'A';
 
-// Estimated TAKER fee per fill, % of notional. Used for break-even (entry + fees, not just spread).
-// NOTE: estimates — verify the newer venues. Lighter/RH are ~fee-free today.
+// Base-tier TAKER fee per fill, % of notional (verified from each venue's official fee docs, 2026-10).
+// Used for break-even (entry spread + fees, not spread alone). Maker fees are lower/zero on most of these.
+// Notes: Lighter/RH standard accounts = 0% (structural, not a promo). Variational/Omni = 0% (permanent).
+// Paradex retail (RPI) = 0% (Pro-0 would be 0.045%). Ondo 0.025% is a current promo (0.05% standard).
 const TAKER_FEE = {
-  Hyperliquid:0.035, Lighter:0.00, LighterRH:0.00, Extended:0.025, Pacifica:0.03,
-  Variational:0.03, Arcus:0.04, RiseX:0.04, TxFlow:0.04, Aster:0.035, Paradex:0.03, Ondo:0.04,
+  Hyperliquid:0.045, Lighter:0.00, LighterRH:0.00, Extended:0.025, Pacifica:0.04,
+  Variational:0.00, Arcus:0.0225, RiseX:0.03, TxFlow:0.045, Aster:0.04, Paradex:0.00, Ondo:0.025,
 };
 const FEE_DEFAULT = 0.04;
 function legFee(ex){ const f=TAKER_FEE[ex]; return f==null?FEE_DEFAULT:f; }
