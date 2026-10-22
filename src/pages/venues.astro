@@ -1,0 +1,227 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Lyfher — Venues I Farm" description="The perp DEXs I farm for points, with real fees, my referral codes and perks. Join with my code.">
+
+<!-- Hero -->
+<section class="hero-wrap text-center py-8">
+  <div class="hero-glow"></div>
+  <h1 class="relative text-4xl sm:text-5xl font-bold text-white mb-3">
+    <span data-en="Venues I" data-es="Venues que">Venues I</span>
+    <span class="text-green-400"> <span data-en="farm" data-es="farmeo">farm</span></span>
+  </h1>
+  <p class="text-gray-400 text-base max-w-2xl mx-auto"
+     data-en="The perp DEXs I actually trade for points — with real fees from their docs, my referral code and the perk you get. Pick one, join with my code, farm the spread in the scanner."
+     data-es="Los perp DEXs que de verdad opero por puntos — con fees reales sacados de sus docs, mi código de referido y el perk que obtienes. Elige uno, únete con mi código y farmea el spread en el scanner.">
+    The perp DEXs I farm for points — real fees, my code, and the perk you get.
+  </p>
+</section>
+
+<!-- Stats -->
+<div class="grid grid-cols-3 gap-3 mb-6 max-w-md mx-auto">
+  <div class="stat-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+    <div id="stat-count" class="text-2xl font-bold text-green-400">—</div>
+    <div class="text-xs text-gray-500 mt-0.5" data-en="Venues" data-es="Venues">Venues</div>
+  </div>
+  <div class="stat-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+    <div id="stat-zero" class="text-2xl font-bold text-emerald-400">—</div>
+    <div class="text-xs text-gray-500 mt-0.5" data-en="Zero-fee" data-es="Sin fee">Zero-fee</div>
+  </div>
+  <div class="stat-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+    <div class="text-2xl font-bold text-blue-400">100%</div>
+    <div class="text-xs text-gray-500 mt-0.5" data-en="Delta-neutral" data-es="Delta-neutral">Delta-neutral</div>
+  </div>
+</div>
+
+<!-- Cards -->
+<div id="venues" class="grid gap-4 sm:grid-cols-2 mb-8"></div>
+
+<section class="mt-2 border-t border-gray-800 pt-6 text-center">
+  <p class="text-gray-500 text-sm max-w-xl mx-auto"
+     data-en="Join buttons are my referral links; codes are mine. Fees are base-tier taker/maker from each venue's official docs and can change — verify on the venue. Not financial advice."
+     data-es="Los botones Unirse son mis links de referido; los códigos son míos. Los fees son taker/maker de tier base según los docs oficiales de cada venue y pueden cambiar — verifica en el venue. No es asesoría financiera.">
+    Join buttons are referral links; codes are mine. Fees from each venue's docs, may change.
+  </p>
+</section>
+
+</Layout>
+
+<style is:global>
+  /* ambient hero glow */
+  .hero-wrap{ position:relative; }
+  .hero-glow{
+    position:absolute; left:50%; top:30%; width:min(560px,90%); height:220px;
+    transform:translate(-50%,-50%); pointer-events:none; z-index:0;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(34,197,94,0.18), transparent 70%);
+    filter: blur(14px);
+  }
+
+  /* venue cards: color-tinted, glow + lift on hover */
+  .vcard{
+    position:relative; overflow:hidden; isolation:isolate;
+    background:
+      radial-gradient(130% 120% at 100% 0%, color-mix(in srgb, var(--c) 9%, transparent), transparent 55%),
+      #111820;
+    border:1px solid #1f2a35;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .3s ease;
+  }
+  .vcard::before{  /* top accent line */
+    content:""; position:absolute; top:0; left:0; right:0; height:1px; z-index:2;
+    background: linear-gradient(90deg, transparent, var(--c), transparent);
+    opacity:.35; transition: opacity .3s ease;
+  }
+  .vcard-glow{  /* soft radial that brightens on hover */
+    position:absolute; inset:-40% 40% auto -40%; height:180%; z-index:0; pointer-events:none;
+    background: radial-gradient(40% 40% at 20% 10%, color-mix(in srgb, var(--c) 22%, transparent), transparent 70%);
+    opacity:0; transition: opacity .35s ease;
+  }
+  .vcard:hover{
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--c) 55%, #1f2a35);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent),
+                0 14px 44px -14px color-mix(in srgb, var(--c) 50%, transparent);
+  }
+  .vcard:hover::before{ opacity:.95; }
+  .vcard:hover .vcard-glow{ opacity:1; }
+  .vcard .vdot{ box-shadow:0 0 10px -1px var(--c); }
+
+  /* join button fills with its venue color on hover */
+  .vjoin{ transition: background-color .2s ease, color .2s ease, box-shadow .25s ease, transform .15s ease; }
+  .vjoin:hover{
+    background: var(--c) !important; color:#0a0e13 !important;
+    box-shadow: 0 6px 20px -6px color-mix(in srgb, var(--c) 70%, transparent);
+    transform: translateY(-1px);
+  }
+  .code-btn:hover{ border-color: color-mix(in srgb, var(--c) 60%, #374151) !important; }
+
+  /* stat cards lift subtly */
+  .stat-card{ transition: transform .18s ease, border-color .18s ease, box-shadow .25s ease; }
+  .stat-card:hover{ transform:translateY(-2px); border-color:#2b3a49;
+    box-shadow:0 10px 30px -14px rgba(34,197,94,0.35); }
+
+  @media (prefers-reduced-motion: reduce){
+    .vcard, .vjoin, .stat-card{ transition:none; }
+    .vcard:hover, .vjoin:hover, .stat-card:hover{ transform:none; }
+  }
+</style>
+
+<script is:inline>
+const lang = () => document.documentElement.lang || 'en';
+const T = (en, es) => lang() === 'es' ? es : en;
+
+// bps = fee% × 100. Fees are base-tier, verified from each venue's docs (2026-10).
+const VENUES = [
+  { key:'Variational', color:'#a78bfa', tier:'B',
+    descEn:'Zero-fee peer-to-peer perps on crypto and RWA, quoted by its own LP.',
+    descEs:'Perps peer-to-peer sin fee en cripto y RWA, cotizados por su propio LP.',
+    maker:0, taker:0, code:'OMNIMDZYKINU', join:'https://omni.variational.io/?ref=OMNIMDZYKINU' },
+  { key:'TxFlow', color:'#4ade80', tier:'C',
+    descEn:'A financial L1 whose DEX runs a fully on-chain order book.',
+    descEs:'Una L1 financiera cuyo DEX corre un order book 100% on-chain.',
+    maker:0.015, taker:0.045, code:'TXLYFHER', join:'https://app.txflow.com/r/TXLYFHER',
+    perkEn:'5% off trading fees + I rebate my 20% commission back to you',
+    perkEs:'5% de descuento en fees + te devuelvo mi 20% de comisión' },
+  { key:'Lighter', color:'#a3e635', tier:'A',
+    descEn:'ZK order-book perp DEX, zero fees for standard accounts.',
+    descEs:'Perp DEX con order book ZK, sin fees para cuentas estándar.',
+    maker:0, taker:0, code:'LYFHER', join:'https://app.lighter.xyz/?referral=LYFHER&source=none' },
+  { key:'Lighter RH', color:'#84cc16', tier:'A',
+    descEn:"Lighter's instance on Robinhood Chain: crypto, stocks & pre-IPO perps in USDG.",
+    descEs:'La instancia de Lighter en Robinhood Chain: cripto, acciones y perps pre-IPO en USDG.',
+    maker:0, taker:0, code:'23169FPC', join:'https://robinhoodchain.lighter.xyz/?referral=23169FPC&source=none' },
+  { key:'Extended', color:'#34d399', tier:'B',
+    descEn:'Perps on crypto, equities, FX and commodities, from an ex-Revolut team.',
+    descEs:'Perps en cripto, acciones, FX y commodities, de un equipo ex-Revolut.',
+    maker:0, taker:0.025, code:'LYFHER', join:'https://app.extended.exchange/join/LYFHER' },
+  { key:'Arcus', color:'#f472b6', tier:'C',
+    descEn:'Stock tokens and perps, 24/7, on Robinhood Chain. Built by the dYdX team.',
+    descEs:'Tokens de acciones y perps, 24/7, en Robinhood Chain. Hecho por el equipo de dYdX.',
+    maker:0, taker:0.0225, code:'LYFHER', join:'https://waitlist.arcus.xyz/s/LYFHER' },
+  { key:'Hyperliquid', color:'#60a5fa', tier:'A',
+    descEn:'The deepest perp DEX, on its own L1. The benchmark for funding and liquidity.',
+    descEs:'El perp DEX más profundo, en su propia L1. La referencia de funding y liquidez.',
+    maker:0.015, taker:0.045, code:'LYFHER', join:'https://app.hyperliquid.xyz/join/LYFHER' },
+  { key:'Pacifica', color:'#22d3ee', tier:'B',
+    descEn:'Fast perps on Solana with a points season live.',
+    descEs:'Perps rápidos en Solana con temporada de puntos activa.',
+    maker:0.015, taker:0.04, code:'Lyfher', join:'https://app.pacifica.fi?referral=Lyfher' },
+  { key:'RiseX', color:'#e879f9', tier:'C',
+    descEn:'Fully on-chain order-book perp DEX on RISE Chain, its own fast Ethereum L2.',
+    descEs:'Perp DEX con order book 100% on-chain en RISE Chain, su propio L2 rápido de Ethereum.',
+    maker:0.01, taker:0.03, code:'lyfher', join:'https://www.rise.trade/invite/lyfher' },
+  { key:'Aster', color:'#f59e0b', tier:'B',
+    descEn:'Multi-chain perps with 0% maker fees and a points program.',
+    descEs:'Perps multi-chain con 0% de fee maker y programa de puntos.',
+    maker:0, taker:0.04, code:'A05002', join:'https://www.asterdex.com/en/referral/A05002' },
+  { key:'Paradex', color:'#fb7185', tier:'B',
+    descEn:'Perp DEX on its own Starknet appchain. Zero fees for retail (RPI) orders.',
+    descEs:'Perp DEX en su propio appchain de Starknet. Cero fees para órdenes retail (RPI).',
+    maker:0, taker:0, code:'Lyfher', join:'https://app.paradex.trade/r/Lyfher' },
+  { key:'Ondo', color:'#38bdf8', tier:'B',
+    descEn:'RWA / stock / commodity perps. Taker currently 2.5 bps on a 50% promo.',
+    descEs:'Perps de RWA / acciones / commodities. Taker hoy 2.5 bps con promo del 50%.',
+    maker:0.01, taker:0.025, code:'DTZ8BE', join:'https://app.ondoperps.xyz/?ref=DTZ8BE' },
+];
+
+const TIER = {
+  A:{en:'Established', es:'Establecido', c:'#22c55e'},
+  B:{en:'Growing',     es:'Creciendo',  c:'#eab308'},
+  C:{en:'New',         es:'Nuevo',      c:'#f472b6'},
+};
+const bps = p => p === 0 ? '0' : (p*100).toFixed(p*100 % 1 === 0 ? 0 : (p*100 < 1 ? 2 : 1));
+function feeLabel(v){
+  if(v.maker===0 && v.taker===0) return T('0 fees','0 fees');
+  return `${bps(v.maker)} / ${bps(v.taker)} bps`;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function cardHTML(v){
+  const t = TIER[v.tier];
+  const perk = T(v.perkEn, v.perkEs);
+  return `<div class="vcard rounded-2xl p-4 flex flex-col gap-3" style="--c:${v.color}">
+    <div class="vcard-glow"></div>
+    <div class="relative flex items-start justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="vdot w-3 h-3 rounded-full shrink-0" style="background:${v.color}"></span>
+        <span class="font-bold text-white text-lg truncate">${esc(v.key)}</span>
+      </div>
+      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap" style="color:${t.c};border-color:${t.c}55;background:${t.c}14">${t[lang()]}</span>
+    </div>
+    <p class="relative text-sm text-gray-400 leading-relaxed">${esc(T(v.descEn, v.descEs))}</p>
+    <div class="relative flex items-center gap-4 text-xs">
+      <span class="text-gray-500">${T('Fees','Fees')} <span class="font-mono ${v.taker===0?'text-emerald-400':'text-gray-200'}">${feeLabel(v)}</span></span>
+      <span class="text-gray-600" title="${T('maker / taker, base tier','maker / taker, tier base')}">ⓘ</span>
+    </div>
+    ${perk?`<div class="relative text-xs text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-2.5 py-1.5">🎁 ${esc(perk)}</div>`:''}
+    <div class="relative mt-auto pt-1 flex items-center gap-2">
+      <button class="code-btn flex-1 text-left bg-gray-950/80 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 transition-colors truncate" data-code="${esc(v.code)}" title="${T('Copy code','Copiar código')}">
+        <span class="text-gray-500 text-xs">${T('CODE','CÓDIGO')}</span> ${esc(v.code)} <span class="copy-lbl text-gray-600 text-xs">⧉</span>
+      </button>
+      <a href="${v.join}" target="_blank" rel="noopener noreferrer" class="vjoin shrink-0 text-center px-3 py-2 rounded-lg text-sm font-semibold border whitespace-nowrap" style="--c:${v.color};color:${v.color};border-color:${v.color}55;background:${v.color}14">${T('Join','Unirse')} ↗</a>
+    </div>
+  </div>`;
+}
+
+function renderVenues(){
+  document.getElementById('venues').innerHTML = VENUES.map(cardHTML).join('');
+  document.getElementById('stat-count').textContent = VENUES.length;
+  document.getElementById('stat-zero').textContent = VENUES.filter(v=>v.taker===0).length;
+}
+
+document.getElementById('venues').addEventListener('click', async e => {
+  const b = e.target.closest('.code-btn'); if(!b) return;
+  const code = b.dataset.code; let ok=false;
+  try{ await navigator.clipboard.writeText(code); ok=true; }catch{}
+  const lbl = b.querySelector('.copy-lbl'); const o = lbl.textContent;
+  lbl.textContent = ok ? '✓' : '×';
+  lbl.classList.toggle('text-green-400', ok);
+  setTimeout(()=>{ lbl.textContent=o; lbl.classList.remove('text-green-400'); }, 1400);
+});
+
+// re-render cards when the language toggle fires (Layout defines setLang globally)
+const _setLang = window.setLang;
+window.setLang = l => { if(_setLang) _setLang(l); renderVenues(); };
+
+renderVenues();
+</script>
