@@ -36,9 +36,31 @@ import Layout from '../layouts/Layout.astro';
   </div>
 </div>
 
-<div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+<div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
   <p class="text-xs text-gray-500" data-en="Toggle a farm on, enter your points and your $/point in each scenario." data-es="Activa un farm, pon tus puntos y tu $/punto en cada escenario.">Toggle a farm on, enter your points and your $/point.</p>
-  <button id="reset" class="text-xs text-gray-500 hover:text-amber-400 underline" data-en="reset" data-es="reiniciar">reset</button>
+  <div class="flex items-center gap-3">
+    <button id="share" class="text-sm font-semibold px-3.5 py-1.5 rounded-lg border border-green-500/50 text-green-400 bg-green-500/10 hover:bg-green-500/20 transition-colors">
+      📸 <span data-en="Share card" data-es="Compartir card">Share card</span>
+    </button>
+    <button id="reset" class="text-xs text-gray-500 hover:text-amber-400 underline" data-en="reset" data-es="reiniciar">reset</button>
+  </div>
+</div>
+
+<!-- Share overlay -->
+<div id="share-ov" class="hidden fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" >
+  <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 max-w-2xl w-full" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-bold text-white" data-en="Your Pointfolio card" data-es="Tu card de Pointfolio">Your Pointfolio card</h3>
+      <button id="share-close" class="text-gray-500 hover:text-white text-xl leading-none">×</button>
+    </div>
+    <img id="share-img" class="w-full rounded-xl border border-gray-800" alt="Pointfolio card"/>
+    <div class="flex items-center gap-2 mt-3 flex-wrap">
+      <button id="dl" class="flex-1 min-w-32 text-center text-sm font-semibold px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white transition-colors" data-en="⬇ Download PNG" data-es="⬇ Descargar PNG">⬇ Download PNG</button>
+      <button id="cp" class="flex-1 min-w-32 text-center text-sm font-semibold px-3 py-2 rounded-lg border border-gray-700 hover:border-green-500 text-gray-200 transition-colors" data-en="⧉ Copy image" data-es="⧉ Copiar imagen">⧉ Copy image</button>
+      <a id="tw" target="_blank" rel="noopener noreferrer" class="flex-1 min-w-32 text-center text-sm font-semibold px-3 py-2 rounded-lg border border-sky-500/50 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 transition-colors" data-en="𝕏 Post on X" data-es="𝕏 Postear en X">𝕏 Post on X</a>
+    </div>
+    <p id="cp-note" class="text-xs text-gray-500 mt-2 text-center"></p>
+  </div>
 </div>
 
 <!-- Project cards -->
@@ -221,4 +243,111 @@ const _setLang = window.setLang;
 window.setLang = l => { if(_setLang) _setLang(l); render(); };
 
 render();
+
+// ─── Share card (canvas, no external libs) ───────────────────────────────
+function enabledRows(){
+  return PROJECTS.map(p=>{ const s=stateOf(p.key); return {p, s, v:rowValue(s)}; })
+                 .filter(x=>x.s.on && num(x.s.pts)>0);
+}
+function fmtPts(n){ return num(n).toLocaleString('en-US',{maximumFractionDigits:2}); }
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+
+function drawCard(){
+  const W=1200,H=675,S=2;
+  const cv=document.createElement('canvas'); cv.width=W*S; cv.height=H*S;
+  const ctx=cv.getContext('2d'); ctx.scale(S,S);
+  ctx.textBaseline='alphabetic';
+
+  // background + top glow
+  ctx.fillStyle='#0a0e13'; ctx.fillRect(0,0,W,H);
+  let g=ctx.createRadialGradient(W/2,-60,40,W/2,-60,760);
+  g.addColorStop(0,'rgba(34,197,94,0.16)'); g.addColorStop(1,'rgba(10,14,19,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#1f2a35'; ctx.lineWidth=2; ctx.strokeRect(1,1,W-2,H-2);
+
+  // header
+  ctx.fillStyle='#e8eef4'; ctx.font='700 30px system-ui,-apple-system,sans-serif';
+  ctx.fillText('⚡ Lyfher', 56, 72);
+  ctx.textAlign='right'; ctx.fillStyle='#8a99a8'; ctx.font='500 22px system-ui,sans-serif';
+  ctx.fillText('@LyfherCrypto', W-56, 70); ctx.textAlign='left';
+
+  // title
+  ctx.fillStyle='#e8eef4'; ctx.font='800 56px system-ui,sans-serif';
+  ctx.fillText('Pointfolio', 56, 150);
+  ctx.fillStyle='#8a99a8'; ctx.font='500 22px system-ui,sans-serif';
+  ctx.fillText(T('Projected value of my points','Valor proyectado de mis puntos'), 58, 184);
+
+  // totals
+  const rows=enabledRows();
+  let tb=0,tm=0,tu=0; rows.forEach(r=>{tb+=r.v.bear;tm+=r.v.base;tu+=r.v.bull;});
+  const scn=[[T('BEAR','BEAR'),tb,'#f87171'],[T('BASE','BASE'),tm,'#fbbf24'],[T('BULL','BULL'),tu,'#4ade80']];
+  const gap=18, cardW=(W-112-2*gap)/3, cy=210, ch=118;
+  scn.forEach((s,i)=>{ const cx=56+i*(cardW+gap);
+    rr(ctx,cx,cy,cardW,ch,16); ctx.fillStyle='#111820'; ctx.fill();
+    ctx.save(); rr(ctx,cx,cy,cardW,ch,16); ctx.clip();
+    const gg=ctx.createRadialGradient(cx+cardW/2,cy,10,cx+cardW/2,cy,cardW);
+    gg.addColorStop(0,s[2]+'22'); gg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=gg; ctx.fillRect(cx,cy,cardW,ch);
+    ctx.restore();
+    rr(ctx,cx,cy,cardW,ch,16); ctx.strokeStyle=s[2]+'44'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle=s[2]; ctx.font='700 18px system-ui,sans-serif'; ctx.fillText(s[0], cx+22, cy+40);
+    ctx.font='800 42px system-ui,sans-serif'; ctx.fillText(money(s[1]), cx+22, cy+92);
+  });
+
+  // project breakdown (two columns, up to 8)
+  ctx.fillStyle='#5b6b7a'; ctx.font='600 15px system-ui,sans-serif';
+  ctx.fillText(T('BREAKDOWN · points × base','DESGLOSE · puntos × base').toUpperCase(), 56, 378);
+  const n=rows.length, perCol=Math.ceil(n/2)||1, colGap=18, colW=(W-112-colGap)/2, y0=406, rh=52;
+  rows.forEach((r,i)=>{ const col=i<perCol?0:1, row=col===0?i:i-perCol;
+    const x=56+col*(colW+colGap), y=y0+row*rh;
+    rr(ctx,x,y,colW,rh-10,12); ctx.fillStyle='#0e141b'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x+22,y+(rh-10)/2,6,0,7); ctx.fillStyle=r.p.color; ctx.fill();
+    ctx.fillStyle='#e8eef4'; ctx.font='700 21px system-ui,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(r.p.key, x+40, y+28);
+    ctx.textAlign='right'; ctx.fillStyle='#8a99a8'; ctx.font='500 16px system-ui,sans-serif';
+    ctx.fillText(fmtPts(r.s.pts)+' pts', x+colW-115, y+27);
+    ctx.fillStyle='#fbbf24'; ctx.font='700 19px system-ui,sans-serif';
+    ctx.fillText(money(r.v.base), x+colW-16, y+27); ctx.textAlign='left';
+  });
+  if(!n){ ctx.fillStyle='#5b6b7a'; ctx.font='500 20px system-ui,sans-serif';
+    ctx.fillText(T('No farms selected yet.','Aún no hay farms seleccionados.'), 56, 440); }
+
+  // footer
+  ctx.strokeStyle='#1f2a35'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(56,H-58); ctx.lineTo(W-56,H-58); ctx.stroke();
+  ctx.fillStyle='#22c55e'; ctx.font='700 22px system-ui,sans-serif'; ctx.fillText('lyfher.xyz/pointfolio', 56, H-26);
+  ctx.textAlign='right'; ctx.fillStyle='#5b6b7a'; ctx.font='500 18px system-ui,sans-serif';
+  ctx.fillText(T('Project your points →','Proyecta tus puntos →'), W-56, H-26); ctx.textAlign='left';
+
+  return cv;
+}
+
+let _blob=null;
+function openShare(){
+  const rows=enabledRows();
+  if(!rows.length){ alert(T('Toggle at least one farm and enter your points first.','Activa al menos un farm y pon tus puntos primero.')); return; }
+  const cv=drawCard();
+  document.getElementById('share-img').src=cv.toDataURL('image/png');
+  cv.toBlob(b=>{ _blob=b; }, 'image/png');
+  const txt=encodeURIComponent(T('My points stack, projected bear / base / bull 📊\n\nlyfher.xyz/pointfolio','Mi stack de puntos, proyectado bear / base / bull 📊\n\nlyfher.xyz/pointfolio'));
+  document.getElementById('tw').href='https://twitter.com/intent/tweet?text='+txt;
+  document.getElementById('cp-note').textContent='';
+  document.getElementById('share-ov').classList.remove('hidden');
+}
+function closeShare(){ document.getElementById('share-ov').classList.add('hidden'); }
+
+document.getElementById('share').addEventListener('click', openShare);
+document.getElementById('share-close').addEventListener('click', closeShare);
+document.getElementById('share-ov').addEventListener('click', closeShare);
+document.getElementById('dl').addEventListener('click', ()=>{
+  const go=b=>{ const u=URL.createObjectURL(b); const a=document.createElement('a');
+    a.href=u; a.download='lyfher-pointfolio.png'; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1000); };
+  if(_blob) go(_blob); else drawCard().toBlob(go,'image/png');
+});
+document.getElementById('cp').addEventListener('click', async ()=>{
+  const note=document.getElementById('cp-note');
+  try{
+    const blob=_blob||await new Promise(res=>drawCard().toBlob(res,'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+    note.textContent=T('Copied — paste it into your X post.','Copiada — pégala en tu post de X.'); note.className='text-xs text-green-400 mt-2 text-center';
+  }catch(e){ note.textContent=T('Copy not supported here — use Download instead.','Copiar no soportado aquí — usa Descargar.'); note.className='text-xs text-amber-400 mt-2 text-center'; }
+});
 </script>
