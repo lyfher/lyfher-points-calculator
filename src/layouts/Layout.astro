@@ -66,22 +66,54 @@ const { title, description = "DeFi points calculators. Maximize your airdrop rew
           </a>
         </div>
 
-        <!-- Language toggle -->
-        <div class="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
-          <button
-            id="lang-en"
-            onclick="setLang('en')"
-            class="px-2.5 py-1 rounded text-sm font-medium transition-colors"
-          >
-            EN
+        <div class="flex items-center gap-2">
+          <!-- Language toggle -->
+          <div class="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+            <button
+              id="lang-en"
+              onclick="setLang('en')"
+              class="px-2.5 py-1 rounded text-sm font-medium transition-colors"
+            >
+              EN
+            </button>
+            <button
+              id="lang-es"
+              onclick="setLang('es')"
+              class="px-2.5 py-1 rounded text-sm font-medium transition-colors"
+            >
+              ES
+            </button>
+          </div>
+          <!-- Mobile menu button -->
+          <button id="nav-toggle" class="sm:hidden p-1.5 rounded-lg border border-gray-800 text-gray-300 hover:text-green-400 transition-colors" aria-label="Menu" aria-expanded="false">
+            <svg id="nav-ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="w-5 h-5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <svg id="nav-ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="w-5 h-5 hidden"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
-          <button
-            id="lang-es"
-            onclick="setLang('es')"
-            class="px-2.5 py-1 rounded text-sm font-medium transition-colors"
-          >
-            ES
-          </button>
+        </div>
+      </div>
+
+      <!-- Mobile menu -->
+      <div id="mobile-menu" class="hidden sm:hidden border-t border-gray-800 bg-gray-950">
+        <div class="max-w-4xl mx-auto px-4 py-2 flex flex-col">
+          <a href="/funding" class="flex items-center gap-2.5 py-2.5 text-sm font-medium text-gray-300 hover:text-green-400 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span data-en="Funding Scanner" data-es="Scanner de Funding">Funding Scanner</span>
+          </a>
+          <a href="/venues" class="flex items-center gap-2.5 py-2.5 text-sm font-medium text-gray-300 hover:text-green-400 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            <span data-en="Venues" data-es="Venues">Venues</span>
+          </a>
+          <a href="/pointfolio" class="flex items-center gap-2.5 py-2.5 text-sm font-medium text-gray-300 hover:text-green-400 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 3v18h18"/><path d="M7 15v-4M12 15V7M17 15v-6"/></svg>
+            <span data-en="Pointfolio" data-es="Pointfolio">Pointfolio</span>
+          </a>
+          <a href="/stats" class="flex items-center gap-2.5 py-2.5 text-sm font-medium text-gray-300 hover:text-green-400 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            <span data-en="Stats" data-es="Stats">Stats</span>
+          </a>
+          <a href="https://twitter.com/LyfherCrypto" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2.5 py-2.5 text-sm font-medium text-gray-500 hover:text-sky-400 transition-colors">
+            <span>@LyfherCrypto ↗</span>
+          </a>
         </div>
       </div>
     </nav>
@@ -138,4 +170,18 @@ const { title, description = "DeFi points calculators. Maximize your airdrop rew
   // Apply on load
   const saved = localStorage.getItem('lang') || 'en';
   applyLang(saved);
+
+  // Mobile menu toggle
+  (function(){
+    const btn=document.getElementById('nav-toggle'), menu=document.getElementById('mobile-menu');
+    const io=document.getElementById('nav-ico-open'), ic=document.getElementById('nav-ico-close');
+    if(!btn||!menu) return;
+    btn.addEventListener('click',()=>{
+      menu.classList.toggle('hidden');
+      const open=!menu.classList.contains('hidden');
+      btn.setAttribute('aria-expanded', open);
+      io.classList.toggle('hidden', open);
+      ic.classList.toggle('hidden', !open);
+    });
+  })();
 </script>
