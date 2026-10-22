@@ -129,8 +129,11 @@ import Layout from '../layouts/Layout.astro';
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="net">
             <span data-en="Net APR" data-es="APR Neto">Net APR</span><span class="help" data-tip-en="Net APR = the funding spread you capture right now: short's APR minus long's APR. This is your yield if funding holds." data-tip-es="APR Neto = el spread de funding que capturas ahora: APR del corto menos APR del largo. Es tu rendimiento si el funding se mantiene.">ⓘ</span> <span class="sort-arrow" data-key="net"></span>
           </th>
-          <th class="text-right px-3 py-3">
-            <span data-en="7d Trend" data-es="Tend. 7d">7d Trend</span><span class="help" data-tip-en="Mini-chart of this pair's Net APR over the last ~7 days (hourly snapshots) — shows if the spread is rising, falling or holding. Line COLOR = consistency: 🟢 green = stable/reliable, 🟡 yellow = varies, 🔴 red = very volatile. Hover the cell for the 7d average. Needs ~a day of data to fill in." data-tip-es="Mini-gráfico del Net APR de este par en los últimos ~7 días (snapshots por hora) — muestra si el spread sube, baja o se mantiene. El COLOR de la línea = consistencia: 🟢 verde = estable/confiable, 🟡 amarillo = varía, 🔴 rojo = muy volátil. Pasa el mouse por la celda para ver el promedio 7d. Necesita ~un día de datos para llenarse.">ⓘ</span>
+          <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="sust">
+            <span data-en="Sustainability" data-es="Sostenibilidad">Sustainability</span><span class="help" data-tip-en="How reliable this pair's Net APR has been over the last ~7 days: 100% = rock-steady, low % = it swung a lot. Based on the variability of hourly snapshots. Fills in after ~a day of data." data-tip-es="Qué tan confiable ha sido el APR neto de este par en los últimos ~7 días: 100% = muy estable, % bajo = varió mucho. Basado en la variabilidad de los snapshots por hora. Se llena tras ~un día de datos.">ⓘ</span> <span class="sort-arrow" data-key="sust"></span>
+          </th>
+          <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="be">
+            <span data-en="Break-even" data-es="Recupero">Break-even</span><span class="help" data-tip-en="Days of funding needed to recover the entry-spread cost. 0d = free, or you're paid to enter. Lower is better. '—' = no spread data; '∞' = funding too low to recover." data-tip-es="Días de funding para recuperar el costo del spread de entrada. 0d = gratis, o te pagan por entrar. Menos es mejor. '—' = sin dato de spread; '∞' = funding muy bajo para recuperar.">ⓘ</span> <span class="sort-arrow" data-key="be"></span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span><span class="help" data-tip-en="Entry Spread = price gap between the two legs when you open. Negative/small (green) = cheap or you get paid to enter; large (red) = costly entry you must recover with funding." data-tip-es="Spread de Entrada = diferencia de precio entre las dos patas al abrir. Negativo/pequeño (verde) = barato o te pagan por entrar; grande (rojo) = entrada cara que debes recuperar con el funding.">ⓘ</span> <span class="sort-arrow" data-key="spread"></span>
@@ -141,7 +144,7 @@ import Layout from '../layouts/Layout.astro';
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="6" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
+        <tr><td colspan="7" class="text-center py-16 text-gray-600" data-en="Loading funding data…" data-es="Cargando datos de funding…">Loading funding data…</td></tr>
       </tbody>
     </table>
   </div>
@@ -379,7 +382,20 @@ function histStats(coin){
   const d1=vals(pts.filter(p=>p[0]>=now-864e5)), d7=vals(pts);
   const avg7=mean(d7), sd=Math.sqrt(mean(d7.map(x=>(x-avg7)**2)));
   const cv=Math.abs(avg7)>1?sd/Math.abs(avg7):9;              // coefficient of variation
-  return {avg24:d1.length?mean(d1):null, avg7, cons:cv<0.3?'high':cv<0.7?'med':'low', n:pts.length};
+  return {avg24:d1.length?mean(d1):null, avg7, cons:cv<0.3?'high':cv<0.7?'med':'low', cv, n:pts.length};
+}
+
+// Sustainability = how reliable this pair's net APR has been over 7d (inverse of its volatility), 0–100%.
+function sustainability(coin){
+  const h=histStats(coin); if(!h||h.cv>=9) return null;
+  return {score:Math.max(0,Math.min(100,Math.round((1-h.cv)*100))), ready:h.n>=MIN_HIST, n:h.n, cons:h.cons};
+}
+// Break-even = days of funding needed to recover the entry-spread cost. 0 = free/credit entry, null = no spread.
+function breakEvenDays(r){
+  if(r.spread==null) return null;
+  if(r.spread<=0) return 0;
+  if(r.netAPR<=0) return Infinity;
+  return r.spread/r.netAPR*365;
 }
 
 // Entry-spread history → is the price gap between the two legs shrinking (recoverable) or widening (trap)?
@@ -477,13 +493,15 @@ function renderTable(){
     if(sortKey==='net'){av=a.netAPR;bv=b.netAPR;}
     else if(sortKey==='spread'){av=a.spread==null?-1:Math.abs(a.spread);bv=b.spread==null?-1:Math.abs(b.spread);}  // by magnitude: fattest spread = biggest opportunity
     else if(sortKey==='depth'){av=a.depth??-1;bv=b.depth??-1;}
+    else if(sortKey==='sust'){const sa=sustainability(a.coin),sb=sustainability(b.coin);av=sa&&sa.ready?sa.score:-1;bv=sb&&sb.ready?sb.score:-1;}
+    else if(sortKey==='be'){const da=breakEvenDays(a),db2=breakEvenDays(b);av=da==null?-1e9:(isFinite(da)?-da:-1e8);bv=db2==null?-1e9:(isFinite(db2)?-db2:-1e8);}  // lower days = better → negate so desc shows fastest first
     else{av=a.sources;bv=b.sources;}
     return (av-bv)*sortDir; });
 
   updateStats(show);
 
   if(!show.length){
-    $('table-body').innerHTML=`<tr><td colspan="6" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
+    $('table-body').innerHTML=`<tr><td colspan="7" class="text-center py-16 text-gray-600">${T('No results — loosen the filters','Sin resultados — afloja los filtros')}</td></tr>`;
     return;
   }
 
@@ -502,14 +520,20 @@ function renderTable(){
       <td class="px-3 py-3 text-right ${netColor(r.netAPR)}" title="${netTip}">
         <div class="font-bold">+${r.netAPR.toFixed(2)}%</div>
       </td>
-      ${(() => { const h=histStats(r.coin), pts=hist[r.coin]||[];
-        if(!h||pts.length<2) return `<td class="px-3 py-3 text-right text-gray-600" title="${T('Collecting history…','Recolectando historial…')}">—</td>`;
-        const ready=h.n>=MIN_HIST;
-        const col=!ready?'#6b7280':h.cons==='high'?'#22c55e':h.cons==='med'?'#eab308':'#ef4444';
-        const tt=ready
-          ? `${T('7d avg','prom 7d')} ${h.avg7>=0?'+':''}${h.avg7.toFixed(0)}% · ${T('consistency','consistencia')}: ${h.cons} · ${h.n} ${T('samples','muestras')}`
-          : `${T('Building history','Creando historial')} ${h.n}/${MIN_HIST} — ${T('consistency not reliable yet','consistencia aún no confiable')}`;
-        return `<td class="px-3 py-3 whitespace-nowrap" title="${tt}"><div class="flex justify-end">${sparkline(pts,col)}</div></td>`; })()}
+      ${(() => { const s=sustainability(r.coin);
+        if(!s) return `<td class="px-3 py-3 text-right text-gray-600 text-xs" title="${T('Collecting history…','Recolectando historial…')}">—</td>`;
+        if(!s.ready) return `<td class="px-3 py-3 text-right text-gray-600 text-xs whitespace-nowrap" title="${T('Building history','Creando historial')} ${s.n}/${MIN_HIST}">·· ${s.n}/${MIN_HIST}</td>`;
+        const col=s.cons==='high'?'#22c55e':s.cons==='med'?'#eab308':'#ef4444';
+        const tt=`${T('Net APR reliability over 7d','Confiabilidad del APR neto en 7d')}: ${s.score}% · ${s.cons} · ${s.n} ${T('samples','muestras')}`;
+        return `<td class="px-3 py-3 whitespace-nowrap" title="${tt}"><div class="flex items-center justify-end gap-1.5"><div class="w-10 h-1.5 rounded-full bg-gray-700 overflow-hidden"><div class="h-full rounded-full" style="width:${s.score}%;background:${col}"></div></div><span class="text-xs font-mono" style="color:${col}">${s.score}%</span></div></td>`; })()}
+      ${(() => { const d=breakEvenDays(r);
+        let txt,cls;
+        if(d==null){txt='—';cls='text-gray-600';}
+        else if(d===0){txt=T('free','gratis');cls='text-green-400';}
+        else if(!isFinite(d)){txt='∞';cls='text-red-400';}
+        else{txt=d.toFixed(1)+'d';cls=d<=7?'text-green-400':d<=30?'text-yellow-500':'text-red-400';}
+        const tt=T('Days of funding to recover the entry-spread cost','Días de funding para recuperar el costo del spread de entrada');
+        return `<td class="px-3 py-3 text-right font-mono text-xs ${cls}" title="${tt}">${txt}</td>`; })()}
       <td class="px-3 py-3 text-right whitespace-nowrap">
         <div class="font-mono ${spreadCls}">${spreadTxt}</div>
         ${(() => { const sp=spreadHist[r.coin]||[]; if(sp.length<2) return '';
@@ -520,7 +544,7 @@ function renderTable(){
       </td>
       <td class="px-4 py-3 text-right font-mono ${r.depth!=null&&r.depth<1e6?'text-red-400':'text-gray-200'}">${fmtMoney(r.depth)}</td>
     </tr>
-    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="6" class="px-4 py-3"></td></tr>`;
+    <tr class="detail hidden bg-gray-950/60" data-d="${i}"><td colspan="7" class="px-4 py-3"></td></tr>`;
   }).join('');
 
   bindRows();
