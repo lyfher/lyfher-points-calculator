@@ -37,7 +37,7 @@ import Layout from '../layouts/Layout.astro';
 </div>
 
 <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
-  <p class="text-xs text-gray-500" data-en="Toggle a farm on, enter your points and your $/point in each scenario." data-es="Activa un farm, pon tus puntos y tu $/punto en cada escenario.">Toggle a farm on, enter your points and your $/point.</p>
+  <p class="text-xs text-gray-500" data-en="Toggle a farm on and enter your points. Grey $/pt = reference (not market data) — type your own to override." data-es="Activa un farm y pon tus puntos. $/pt en gris = referencia (no son datos de mercado) — escribe el tuyo para reemplazarlo.">Grey $/pt = reference — type your own to override.</p>
   <div class="flex items-center gap-3">
     <button id="share" class="text-sm font-semibold px-3.5 py-1.5 rounded-lg border border-green-500/50 text-green-400 bg-green-500/10 hover:bg-green-500/20 transition-colors">
       📸 <span data-en="Share card" data-es="Compartir card">Share card</span>
@@ -138,18 +138,19 @@ import Layout from '../layouts/Layout.astro';
 const lang = () => document.documentElement.lang || 'en';
 const T = (en, es) => lang() === 'es' ? es : en;
 
-// Starting set the user asked for. $/point defaults are editable assumptions.
+// Starting set the user asked for. ref = grey reference $/point (bull=actual, base=mid 50%, bear=25%).
+// These are NOT market data — just a reference; each user can type their own over them.
 const PROJECTS = [
-  { key:'Variational',  color:'#a78bfa' },
-  { key:'TxFlow',       color:'#4ade80' },
-  { key:'Extended',     color:'#34d399' },
-  { key:'Lighter RH',   color:'#84cc16' },
-  { key:'Arcus',        color:'#f472b6' },
-  { key:'Pacifica',     color:'#22d3ee' },
-  { key:'RiseX',        color:'#e879f9' },
-  { key:'Ondo',         color:'#38bdf8' },
+  { key:'Variational',  color:'#a78bfa', ref:{bear:10,    base:20,   bull:40  } },
+  { key:'TxFlow',       color:'#4ade80', ref:{bear:1,     base:3,    bull:8   } },
+  { key:'Extended',     color:'#34d399', ref:{bear:0.375, base:0.75, bull:1.5 } },
+  { key:'Lighter RH',   color:'#84cc16', ref:{bear:5,     base:10,   bull:20  } },
+  { key:'Arcus',        color:'#f472b6', ref:{bear:1,     base:3,    bull:8   } },
+  { key:'Pacifica',     color:'#22d3ee', ref:{bear:0.05,  base:0.10, bull:0.20} },
+  { key:'RiseX',        color:'#e879f9', ref:{bear:2.5,   base:5,    bull:10  } },
+  { key:'Ondo',         color:'#38bdf8', ref:{bear:0.075, base:0.15, bull:0.30} },
 ];
-const DEF = { on:false, pts:'', bear:'1', base:'3', bull:'8' };   // default $/point assumptions
+const DEF = { on:false, pts:'', bear:'', base:'', bull:'' };   // empty = use the grey reference
 
 const KEY='lyfher_pointfolio';
 let db={};
@@ -162,7 +163,8 @@ const money = n => '$'+Math.round(n).toLocaleString('en-US');
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 function cardHTML(p){
-  const s = stateOf(p.key);
+  const s = stateOf(p.key); const r = p.ref||{};
+  const ph = v => v==null||v==='' ? '' : String(v);
   return `<div class="pcard rounded-2xl p-4 flex flex-col gap-3 ${s.on?'on':''}" style="--c:${p.color}" data-k="${esc(p.key)}">
     <div class="pcard-glow"></div>
     <div class="relative flex items-center justify-between gap-2">
@@ -179,15 +181,15 @@ function cardHTML(p){
     <div class="relative grid grid-cols-3 gap-2">
       <div>
         <label class="block text-[11px] text-red-300/70 mb-1">${T('Bear $/pt','Bear $/pt')}</label>
-        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" value="${esc(s.bear)}" data-f="bear" />
+        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" placeholder="${ph(r.bear)}" value="${esc(s.bear)}" data-f="bear" />
       </div>
       <div>
         <label class="block text-[11px] text-amber-300/70 mb-1">${T('Base $/pt','Base $/pt')}</label>
-        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" value="${esc(s.base)}" data-f="base" />
+        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" placeholder="${ph(r.base)}" value="${esc(s.base)}" data-f="base" />
       </div>
       <div>
         <label class="block text-[11px] text-green-300/70 mb-1">${T('Bull $/pt','Bull $/pt')}</label>
-        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" value="${esc(s.bull)}" data-f="bull" />
+        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" placeholder="${ph(r.bull)}" value="${esc(s.bull)}" data-f="bull" />
       </div>
     </div>
     <div class="relative pt-1 flex items-center justify-between text-xs border-t border-gray-800/70 mt-1">
@@ -197,15 +199,17 @@ function cardHTML(p){
   </div>`;
 }
 
-function rowValue(s){
+// effective $/pt for a field: the user's typed value, else the grey reference
+function eff(p, s, field){ const u=s[field]; if(u!=='' && u!=null) return num(u); return num((p.ref||{})[field]); }
+function rowValue(p, s){
   const pts=num(s.pts);
-  return { bear:pts*num(s.bear), base:pts*num(s.base), bull:pts*num(s.bull) };
+  return { bear:pts*eff(p,s,'bear'), base:pts*eff(p,s,'base'), bull:pts*eff(p,s,'bull') };
 }
 function recompute(){
   let tb=0,tm=0,tu=0;
   PROJECTS.forEach(p=>{
     const s=stateOf(p.key); const card=document.querySelector(`.pcard[data-k="${CSS.escape(p.key)}"]`);
-    const v=rowValue(s);
+    const v=rowValue(p, s);
     if(s.on){ tb+=v.bear; tm+=v.base; tu+=v.bull; }
     if(card){ const el=card.querySelector('.pval');
       el.textContent = s.on && num(s.pts)>0 ? `${money(v.bear)} · ${money(v.base)} · ${money(v.bull)}` : '—';
@@ -246,7 +250,7 @@ render();
 
 // ─── Share card (canvas, no external libs) ───────────────────────────────
 function enabledRows(){
-  return PROJECTS.map(p=>{ const s=stateOf(p.key); return {p, s, v:rowValue(s)}; })
+  return PROJECTS.map(p=>{ const s=stateOf(p.key); return {p, s, v:rowValue(p, s)}; })
                  .filter(x=>x.s.on && num(x.s.pts)>0);
 }
 function fmtPts(n){ return num(n).toLocaleString('en-US',{maximumFractionDigits:2}); }
