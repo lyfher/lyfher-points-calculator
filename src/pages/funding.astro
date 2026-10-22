@@ -133,7 +133,7 @@ import Layout from '../layouts/Layout.astro';
             <span data-en="Sustainability" data-es="Sostenibilidad">Sustainability</span><span class="help" data-tip-en="How reliable this pair's Net APR has been over the last ~7 days: 100% = rock-steady, low % = it swung a lot. Based on the variability of hourly snapshots. Fills in after ~a day of data." data-tip-es="Qué tan confiable ha sido el APR neto de este par en los últimos ~7 días: 100% = muy estable, % bajo = varió mucho. Basado en la variabilidad de los snapshots por hora. Se llena tras ~un día de datos.">ⓘ</span> <span class="sort-arrow" data-key="sust"></span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="be">
-            <span data-en="Break-even" data-es="Recupero">Break-even</span><span class="help" data-tip-en="Days of funding needed to recover the entry-spread cost. 0d = free, or you're paid to enter. Lower is better. '—' = no spread data; '∞' = funding too low to recover." data-tip-es="Días de funding para recuperar el costo del spread de entrada. 0d = gratis, o te pagan por entrar. Menos es mejor. '—' = sin dato de spread; '∞' = funding muy bajo para recuperar.">ⓘ</span> <span class="sort-arrow" data-key="be"></span>
+            <span data-en="Break-even" data-es="Recupero">Break-even</span><span class="help" data-tip-en="Days of funding to recover the entry-spread cost PLUS estimated round-trip taker fees (open + close, both legs). 0d = the spread credit already covers the fees. Lower is better. '—' = no spread data; '∞' = funding too low to recover." data-tip-es="Días de funding para recuperar el costo del spread de entrada MÁS los fees taker estimados de ida y vuelta (abrir + cerrar, ambas patas). 0d = el crédito del spread ya cubre los fees. Menos es mejor. '—' = sin dato de spread; '∞' = funding muy bajo para recuperar.">ⓘ</span> <span class="sort-arrow" data-key="be"></span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span><span class="help" data-tip-en="Entry Spread = price gap between the two legs when you open. Negative/small (green) = cheap or you get paid to enter; large (red) = costly entry you must recover with funding." data-tip-es="Spread de Entrada = diferencia de precio entre las dos patas al abrir. Negativo/pequeño (verde) = barato o te pagan por entrar; grande (rojo) = entrada cara que debes recuperar con el funding.">ⓘ</span> <span class="sort-arrow" data-key="spread"></span>
@@ -250,6 +250,17 @@ const EX = {
   Ondo:       { short:'Ondo',        color:'#38bdf8', tier:'B', interval:'3h', ref:'https://app.ondoperps.xyz/?ref=DTZ8BE', trade:'https://app.ondoperps.xyz/trade/perps/{c}-USD.P?ref=DTZ8BE' },
 };
 const isEst = name => EX[name] && EX[name].tier === 'A';
+
+// Estimated TAKER fee per fill, % of notional. Used for break-even (entry + fees, not just spread).
+// NOTE: estimates — verify the newer venues. Lighter/RH are ~fee-free today.
+const TAKER_FEE = {
+  Hyperliquid:0.035, Lighter:0.00, LighterRH:0.00, Extended:0.025, Pacifica:0.03,
+  Variational:0.03, Arcus:0.04, RiseX:0.04, TxFlow:0.04, Aster:0.035, Paradex:0.03, Ondo:0.04,
+};
+const FEE_DEFAULT = 0.04;
+function legFee(ex){ const f=TAKER_FEE[ex]; return f==null?FEE_DEFAULT:f; }
+// Round-trip taker cost to OPEN and CLOSE both legs, as % of notional per leg.
+function roundTripFeesPct(r){ return (legFee(r.long.ex)+legFee(r.short.ex))*2; }
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 function setStatus(s){
@@ -388,14 +399,15 @@ function histStats(coin){
 // Sustainability = how reliable this pair's net APR has been over 7d (inverse of its volatility), 0–100%.
 function sustainability(coin){
   const h=histStats(coin); if(!h||h.cv>=9) return null;
-  return {score:Math.max(0,Math.min(100,Math.round((1-h.cv)*100))), ready:h.n>=MIN_HIST, n:h.n, cons:h.cons};
+  return {score:Math.max(0,Math.min(100,Math.round(100/(1+h.cv)))), ready:h.n>=MIN_HIST, n:h.n, cons:h.cons};
 }
 // Break-even = days of funding needed to recover the entry-spread cost. 0 = free/credit entry, null = no spread.
 function breakEvenDays(r){
   if(r.spread==null) return null;
-  if(r.spread<=0) return 0;
+  const cost=r.spread + roundTripFeesPct(r);   // signed entry spread + round-trip taker fees (open+close, both legs)
+  if(cost<=0) return 0;                          // spread credit bigger than fees → net positive from the start
   if(r.netAPR<=0) return Infinity;
-  return r.spread/r.netAPR*365;
+  return cost/(r.netAPR/365);
 }
 
 // Entry-spread history → is the price gap between the two legs shrinking (recoverable) or widening (trap)?
@@ -566,24 +578,29 @@ function legLine(l, role, coin){
 function tradeMath(r){
   const cap=capital(); if(!cap) return '';
   const yr=r.netAPR/100*cap, daily=yr/365, sp=r.spread;
-  let entryLine, beLine='';
+  let entryLine, feeLine='', beLine='';
   if(sp==null){ entryLine = r.spreadNote==='mismatch'
       ? T('Entry spread: venues price this >25% apart — likely different contracts, skip.','Spread de entrada: los venues lo valoran con >25% de diferencia — probablemente contratos distintos, evítalo.')
       : T('Entry spread: no price feed.','Spread de entrada: sin precio.'); }
   else {
     const entry=sp/100*cap;  // + = cost, − = credit
-    if(sp<0){
-      entryLine=`<span class="text-green-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = +${fmtMoney(-entry)} ${T('credit','de crédito')}</span>`;
-      beLine=T('You start ahead — funding is profit from day 1.','Empiezas ganando — el funding es ganancia desde el día 1.');
+    const feePct=roundTripFeesPct(r), feeAmt=feePct/100*cap;   // open+close both legs
+    const costPct=sp+feePct, costAmt=costPct/100*cap;          // total friction to overcome
+    entryLine = sp<0
+      ? `<span class="text-green-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = +${fmtMoney(-entry)} ${T('credit','de crédito')}</span>`
+      : `<span class="text-yellow-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = −${fmtMoney(entry)} ${T('cost','de costo')}</span>`;
+    feeLine=`<span class="text-gray-400">${T('Est. round-trip fees','Fees ida y vuelta est.')} ~${feePct.toFixed(2)}% = −${fmtMoney(feeAmt)}</span>`;
+    if(costPct<=0){
+      beLine=T('Spread credit covers the fees — net positive from day 1.','El crédito del spread cubre los fees — positivo desde el día 1.');
     } else {
-      entryLine=`<span class="text-yellow-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = −${fmtMoney(entry)} ${T('cost','de costo')}</span>`;
-      const days=daily>0?entry/daily:Infinity;
-      beLine=isFinite(days)?T(`Break-even in ~${days.toFixed(1)} days of funding.`,`Recuperas en ~${days.toFixed(1)} días de funding.`):T('Funding too low to recover the entry.','Funding muy bajo para recuperar la entrada.');
+      const days=daily>0?costAmt/daily:Infinity;
+      beLine=isFinite(days)?T(`Break-even in ~${days.toFixed(1)} days of funding (after fees).`,`Recuperas en ~${days.toFixed(1)} días de funding (con fees).`):T('Funding too low to recover entry + fees.','Funding muy bajo para recuperar entrada + fees.');
     }
   }
   return `<div class="mt-2 pt-2 border-t border-gray-800">
     <div class="text-gray-500 mb-1">${T('Trade math on','Cálculo sobre')} ${fmtMoney(cap)} ${T('per leg','por pata')}</div>
     <div>${entryLine}</div>
+    ${feeLine?`<div>${feeLine}</div>`:''}
     <div class="text-emerald-400">${T('Funding','Funding')}: +${fmtMoney(yr)}/yr · +${fmtMoney(daily)}/${T('day','día')}</div>
     ${beLine?`<div class="text-gray-400">${beLine}</div>`:''}
   </div>`;
