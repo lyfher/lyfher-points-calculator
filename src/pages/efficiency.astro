@@ -1,0 +1,204 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Lyfher — Farming Efficiency" description="Which perp DEX pays the most points per dollar of volume and per dollar paid in fees. Compare value per $1k volume and return on fees across venues.">
+
+<!-- Hero -->
+<section class="hero-wrap text-center py-8">
+  <div class="hero-glow"></div>
+  <h1 class="relative text-4xl sm:text-5xl font-bold text-white mb-3">
+    <span data-en="Farming" data-es="Eficiencia de">Farming</span>
+    <span class="text-green-400"> <span data-en="efficiency" data-es="farming">efficiency</span></span>
+  </h1>
+  <p class="relative text-gray-400 text-base max-w-2xl mx-auto"
+     data-en="Where should you push volume? Enter the points each venue gives per $1k of volume — fees and point values are prefilled — and see which perp pays the most per dollar of volume and per dollar of fees."
+     data-es="¿Dónde empujar volumen? Pon los puntos que da cada venue por $1k de volumen — los fees y el valor del punto vienen precargados — y mira qué perp paga más por dólar de volumen y por dólar de fees.">
+    Which perp pays the most per $ of volume and per $ of fees.
+  </p>
+</section>
+
+<!-- Scenario selector -->
+<div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+  <div class="inline-flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+    <button class="scn-btn px-3 py-1 rounded-md text-xs font-semibold transition-colors" data-scn="bear" data-en="Bear" data-es="Bear">Bear</button>
+    <button class="scn-btn px-3 py-1 rounded-md text-xs font-semibold transition-colors" data-scn="base" data-en="Base" data-es="Base">Base</button>
+    <button class="scn-btn px-3 py-1 rounded-md text-xs font-semibold transition-colors" data-scn="bull" data-en="Bull" data-es="Bull">Bull</button>
+  </div>
+  <div class="flex items-center gap-3">
+    <span class="text-xs text-gray-500" data-en="$/pt scenario applied to the whole table" data-es="Escenario $/pt aplicado a toda la tabla">$/pt scenario for the table</span>
+    <button id="reset" class="text-xs text-gray-500 hover:text-amber-400 underline" data-en="reset" data-es="reiniciar">reset</button>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden mb-4">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm min-w-[720px]">
+      <thead class="bg-gray-950/60 text-gray-400 text-xs uppercase tracking-wide">
+        <tr>
+          <th class="text-left font-semibold px-3 py-3" data-en="Venue" data-es="Venue">Venue</th>
+          <th class="text-right font-semibold px-3 py-3">
+            <span data-en="Fee" data-es="Fee">Fee</span>
+            <span class="help" title="Taker fee in basis points (1 bps = 0.01%). Prefilled from each venue's docs — editable. Cost per $1k of volume = bps ÷ 10.">ⓘ</span>
+          </th>
+          <th class="text-right font-semibold px-3 py-3">
+            <span data-en="Pts / $1k vol" data-es="Pts / $1k vol">Pts / $1k vol</span>
+            <span class="help" title="How many points this venue gives you per $1,000 of volume traded. This varies by program/season and isn't public — enter your own estimate.">ⓘ</span>
+          </th>
+          <th class="text-right font-semibold px-3 py-3">
+            <span data-en="$/pt" data-es="$/pt">$/pt</span>
+            <span class="help" title="Value per point for the selected scenario. Grey = reference (your own assumption from Pointfolio) — type to override.">ⓘ</span>
+          </th>
+          <th class="text-right font-semibold px-3 py-3 cursor-pointer select-none hover:text-white" data-sort="value">
+            <span data-en="Value / $1k" data-es="Valor / $1k">Value / $1k</span> <span class="sort-arr" data-k="value"></span>
+            <span class="help" title="Dollar value of points earned per $1,000 of volume = (Pts/$1k) × $/pt.">ⓘ</span>
+          </th>
+          <th class="text-right font-semibold px-3 py-3 cursor-pointer select-none hover:text-white" data-sort="ret">
+            <span data-en="Return on fees" data-es="Retorno s/ fees">Return on fees</span> <span class="sort-arr" data-k="ret"></span>
+            <span class="help" title="Dollars of point value earned per $1 paid in fees = Value ÷ fee cost. ∞ on zero-fee venues (free volume).">ⓘ</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="eff-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<p class="text-xs text-gray-500 mb-8" data-en="Tip: zero-fee venues give points on free volume — their return on fees is infinite, so compare them by Value / $1k instead. Saved only in your browser." data-es="Tip: los venues sin fee dan puntos sobre volumen gratis — su retorno sobre fees es infinito, así que compáralos por Valor / $1k. Todo se guarda solo en tu navegador.">
+  Zero-fee venues = free volume (infinite return on fees); compare them by Value / $1k.
+</p>
+
+<section class="mt-2 border-t border-gray-800 pt-6 text-center">
+  <p class="text-gray-500 text-sm max-w-xl mx-auto"
+     data-en="Points-per-volume rates are your own estimates, not official figures. Point values are assumptions. Fees are base-tier taker from each venue's docs and can change. Not financial advice."
+     data-es="Las tasas de puntos por volumen son estimaciones tuyas, no cifras oficiales. Los valores del punto son supuestos. Los fees son taker de tier base según los docs de cada venue y pueden cambiar. No es asesoría financiera.">
+    Points-per-volume rates and point values are your own estimates. Not financial advice.
+  </p>
+</section>
+
+</Layout>
+
+<style is:global>
+  .hero-wrap{ position:relative; }
+  .hero-glow{
+    position:absolute; left:50%; top:30%; width:min(560px,90%); height:220px;
+    transform:translate(-50%,-50%); pointer-events:none; z-index:0;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(34,197,94,0.18), transparent 70%);
+    filter: blur(14px);
+  }
+  .help{ margin-left:3px; color:#6b7280; cursor:help; font-weight:400; }
+  .help:hover{ color:#d1d5db; }
+
+  .ef-in{ width:84px; text-align:right; background:#0a0e13; border:1px solid #374151; border-radius:8px;
+    padding:5px 8px; color:#e5e7eb; font-family:ui-monospace,monospace; font-size:.82rem; outline:none;
+    transition:border-color .15s ease; }
+  .ef-in:focus{ border-color: color-mix(in srgb, var(--c,#22c55e) 70%, #374151); }
+  .ef-in::-webkit-outer-spin-button,.ef-in::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .ef-in[type=number]{ -moz-appearance:textfield; }
+
+  #eff-body tr{ border-top:1px solid #1f2a35; transition:background .15s ease; }
+  #eff-body tr:hover{ background:#0f1620; }
+  #eff-body tr.best{ background:color-mix(in srgb,#22c55e 7%,transparent); }
+  #eff-body tr.best:hover{ background:color-mix(in srgb,#22c55e 11%,transparent); }
+  .vdot{ box-shadow:0 0 10px -1px var(--c); }
+</style>
+
+<script is:inline>
+const lang = () => document.documentElement.lang || 'en';
+const T = (en, es) => lang() === 'es' ? es : en;
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+const num = v => { const n=parseFloat(v); return isNaN(n)||n<0 ? 0 : n; };
+
+// Prefilled from the scanner's verified taker fees (bps) + Pointfolio reference $/pt.
+const VENUES = [
+  { key:'Variational', color:'#a78bfa', feeBps:0,    ref:{bear:30,   base:40,   bull:50  } },
+  { key:'TxFlow',      color:'#4ade80', feeBps:4.5,  ref:{bear:0.8,  base:1.3,  bull:2   } },
+  { key:'Extended',    color:'#34d399', feeBps:2.5,  ref:{bear:1,    base:1.5,  bull:2   } },
+  { key:'Lighter RH',  color:'#84cc16', feeBps:0,    ref:{bear:5,    base:10,   bull:20  } },
+  { key:'Arcus',       color:'#f472b6', feeBps:2.25, ref:{bear:1,    base:3,    bull:8   } },
+  { key:'Pacifica',    color:'#22d3ee', feeBps:4,    ref:{bear:0.10, base:0.15, bull:0.20} },
+  { key:'RiseX',       color:'#e879f9', feeBps:3,    ref:{bear:6,    base:10,   bull:15  } },
+  { key:'Ondo',        color:'#38bdf8', feeBps:2.5,  ref:{bear:0.075,base:0.15, bull:0.30} },
+];
+
+const KEY='lyfher_efficiency';
+let db={}, scenario='base', sortKey='value';
+try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s){ db=s.db||{}; scenario=s.scenario||'base'; sortKey=s.sortKey||'value'; } }catch{}
+function st(k){ return Object.assign({fee:'',pts:'',dpp:''}, db[k]||{}); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({db,scenario,sortKey})); }catch{} }
+
+// effective values
+function feeBps(v,s){ return s.fee!=='' ? num(s.fee) : v.feeBps; }
+function dpp(v,s){ return s.dpp!=='' ? num(s.dpp) : num(v.ref[scenario]); }
+function feeCost1k(v,s){ return feeBps(v,s)/10; }           // $ per $1k of volume
+function value1k(v,s){ return num(s.pts) * dpp(v,s); }      // $ of point value per $1k volume
+function retOnFees(v,s){ const c=feeCost1k(v,s), val=value1k(v,s); return c>0 ? val/c : (val>0?Infinity:0); }
+
+const money = n => '$'+(n>=100?Math.round(n).toLocaleString('en-US'):n.toFixed(2));
+const fmtRet = r => r===Infinity ? '∞' : (r>=100?Math.round(r):r.toFixed(1))+'×';
+
+function rowHTML(v, rank){
+  const s=st(v.key);
+  const val=value1k(v,s), ret=retOnFees(v,s), has=num(s.pts)>0;
+  const valCol = has ? 'text-green-400' : 'text-gray-600';
+  const retCol = !has ? 'text-gray-600' : (ret===Infinity ? 'text-emerald-400' : 'text-gray-200');
+  return `<tr class="${rank===0&&has?'best':''}" data-k="${esc(v.key)}" style="--c:${v.color}">
+    <td class="px-3 py-2.5 whitespace-nowrap">
+      <div class="flex items-center gap-2">
+        <span class="vdot w-2.5 h-2.5 rounded-full shrink-0" style="background:${v.color}"></span>
+        <span class="font-semibold text-white">${esc(v.key)}</span>
+      </div>
+    </td>
+    <td class="px-3 py-2.5 text-right">
+      <input class="ef-in" type="number" min="0" step="any" inputmode="decimal" placeholder="${v.feeBps}" value="${esc(s.fee)}" data-f="fee" title="bps"/>
+      <span class="text-gray-600 text-xs ml-1">bps</span>
+    </td>
+    <td class="px-3 py-2.5 text-right">
+      <input class="ef-in" type="number" min="0" step="any" inputmode="decimal" placeholder="0" value="${esc(s.pts)}" data-f="pts"/>
+    </td>
+    <td class="px-3 py-2.5 text-right">
+      <input class="ef-in" style="width:72px" type="number" min="0" step="any" inputmode="decimal" placeholder="${v.ref[scenario]}" value="${esc(s.dpp)}" data-f="dpp"/>
+    </td>
+    <td class="px-3 py-2.5 text-right font-mono ${valCol}">${has?money(val):'—'}</td>
+    <td class="px-3 py-2.5 text-right font-mono ${retCol}">${has?fmtRet(ret):'—'}</td>
+  </tr>`;
+}
+
+function sorted(){
+  return [...VENUES].map(v=>({v,s:st(v.key)})).sort((a,b)=>{
+    const ha=num(a.s.pts)>0, hb=num(b.s.pts)>0;
+    if(ha!==hb) return ha?-1:1;                 // rows with points first
+    const fa = sortKey==='ret' ? retOnFees(a.v,a.s) : value1k(a.v,a.s);
+    const fb = sortKey==='ret' ? retOnFees(b.v,b.s) : value1k(b.v,b.s);
+    return fb-fa;
+  }).map(x=>x.v);
+}
+
+function render(){
+  const list=sorted();
+  document.getElementById('eff-body').innerHTML=list.map((v,i)=>rowHTML(v,i)).join('');
+  // scenario button styles
+  document.querySelectorAll('.scn-btn').forEach(b=>{
+    const on=b.dataset.scn===scenario;
+    b.className='scn-btn px-3 py-1 rounded-md text-xs font-semibold transition-colors '+(on?'bg-green-600 text-white':'text-gray-400 hover:text-white');
+  });
+  // sort arrows
+  document.querySelectorAll('.sort-arr').forEach(a=>{ a.textContent = a.dataset.k===sortKey ? ' ↓' : ''; });
+}
+
+document.getElementById('eff-body').addEventListener('input', e=>{
+  const inp=e.target.closest('.ef-in'); if(!inp) return;
+  const k=inp.closest('tr').dataset.k, f=inp.dataset.f;
+  const s=st(k); s[f]=inp.value; db[k]=s; save();
+  render();
+});
+document.querySelectorAll('.scn-btn').forEach(b=>b.addEventListener('click',()=>{ scenario=b.dataset.scn; save(); render(); }));
+document.querySelectorAll('[data-sort]').forEach(h=>h.addEventListener('click',()=>{ sortKey=h.dataset.sort; save(); render(); }));
+document.getElementById('reset').addEventListener('click',()=>{ db={}; try{localStorage.removeItem(KEY);}catch{} render(); });
+
+const _setLang = window.setLang;
+window.setLang = l => { if(_setLang) _setLang(l); render(); };
+
+render();
+</script>

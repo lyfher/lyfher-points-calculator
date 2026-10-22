@@ -274,9 +274,13 @@ function drawCard(){
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle='#1f2a35'; ctx.lineWidth=2; ctx.strokeRect(1,1,W-2,H-2);
 
-  // header
+  // header — draw the Lyfher bolt as a vector path (same icon as the nav), then the wordmark
+  ctx.save();
+  ctx.translate(56, 46); const bs=30/24; ctx.scale(bs,bs);
+  ctx.fillStyle='#4ade80'; ctx.fill(new Path2D('M13 2 3 14h7l-1 8 10-12h-7l1-8z'));
+  ctx.restore();
   ctx.fillStyle='#e8eef4'; ctx.font='700 30px system-ui,-apple-system,sans-serif';
-  ctx.fillText('⚡ Lyfher', 56, 72);
+  ctx.fillText('Lyfher', 94, 72);
   ctx.textAlign='right'; ctx.fillStyle='#8a99a8'; ctx.font='500 22px system-ui,sans-serif';
   ctx.fillText('@LyfherCrypto', W-56, 70); ctx.textAlign='left';
 
