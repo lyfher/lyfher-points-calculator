@@ -134,7 +134,7 @@ import Layout from '../layouts/Layout.astro';
             <span data-en="Sustainability" data-es="Sostenibilidad">Sustainability</span><span class="help" data-tip-en="How reliable this pair's Net APR has been over the last ~7 days: 100% = rock-steady, low % = it swung a lot. Based on the variability of hourly snapshots. Fills in after ~a day of data." data-tip-es="Qué tan confiable ha sido el APR neto de este par en los últimos ~7 días: 100% = muy estable, % bajo = varió mucho. Basado en la variabilidad de los snapshots por hora. Se llena tras ~un día de datos.">ⓘ</span> <span class="sort-arrow" data-key="sust"></span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="be">
-            <span data-en="Break-even" data-es="Recupero">Break-even</span><span class="help" data-tip-en="Days of funding to recover the entry-spread cost PLUS estimated round-trip taker fees (open + close, both legs). 0d = the spread credit already covers the fees. Lower is better. '—' = no spread data; '∞' = funding too low to recover." data-tip-es="Días de funding para recuperar el costo del spread de entrada MÁS los fees taker estimados de ida y vuelta (abrir + cerrar, ambas patas). 0d = el crédito del spread ya cubre los fees. Menos es mejor. '—' = sin dato de spread; '∞' = funding muy bajo para recuperar.">ⓘ</span> <span class="sort-arrow" data-key="be"></span>
+            <span data-en="Break-even" data-es="Recupero">Break-even</span><span class="help" data-tip-en="Days of funding to recover the full entry cost: the entry spread + round-trip taker fees (open+close, both legs) + estimated book-crossing slippage (you take liquidity, so the mid-to-mid spread isn't free). 0d = the spread credit already beats every cost. Lower is better. '—' = no spread data; '∞' = funding too low to recover." data-tip-es="Días de funding para recuperar el costo total de entrada: el spread de entrada + fees taker ida y vuelta (abrir+cerrar, ambas patas) + slippage estimado por cruzar el book (tomas liquidez, así que el spread mid-a-mid no es gratis). 0d = el crédito del spread ya supera todos los costos. Menos es mejor. '—' = sin spread; '∞' = funding muy bajo para recuperar.">ⓘ</span> <span class="sort-arrow" data-key="be"></span>
           </th>
           <th class="sortable text-right px-3 py-3 cursor-pointer hover:text-white select-none" data-sort="spread">
             <span data-en="Entry Spread" data-es="Spread Entrada">Entry Spread</span><span class="help" data-tip-en="Entry Spread = price gap between the two legs when you open. Negative/small (green) = cheap or you get paid to enter; large (red) = costly entry you must recover with funding." data-tip-es="Spread de Entrada = diferencia de precio entre las dos patas al abrir. Negativo/pequeño (verde) = barato o te pagan por entrar; grande (rojo) = entrada cara que debes recuperar con el funding.">ⓘ</span> <span class="sort-arrow" data-key="spread"></span>
@@ -264,6 +264,10 @@ const FEE_DEFAULT = 0.04;
 function legFee(ex){ const f=TAKER_FEE[ex]; return f==null?FEE_DEFAULT:f; }
 // Round-trip taker cost to OPEN and CLOSE both legs, as % of notional per leg.
 function roundTripFeesPct(r){ return (legFee(r.long.ex)+legFee(r.short.ex))*2; }
+// Est. book-crossing slippage per entry fill (mid → taker). Entries aren't free even on 0-fee venues:
+// the entry spread is mid-to-mid, but you take liquidity, so you pay ~half the book spread on each leg.
+const SLIP_PER_LEG = 0.015;
+function entryFrictionPct(r){ return roundTripFeesPct(r) + SLIP_PER_LEG*2; }  // round-trip fees + slippage on the 2 entry legs
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 function setStatus(s){
@@ -407,8 +411,8 @@ function sustainability(coin){
 // Break-even = days of funding needed to recover the entry-spread cost. 0 = free/credit entry, null = no spread.
 function breakEvenDays(r){
   if(r.spread==null) return null;
-  const cost=r.spread + roundTripFeesPct(r);   // signed entry spread + round-trip taker fees (open+close, both legs)
-  if(cost<=0) return 0;                          // spread credit bigger than fees → net positive from the start
+  const cost=r.spread + entryFrictionPct(r);     // signed entry spread + round-trip fees + entry slippage
+  if(cost<=0) return 0;                          // credit bigger than all frictions → net positive from the start
   if(r.netAPR<=0) return Infinity;
   return cost/(r.netAPR/365);
 }
@@ -544,7 +548,7 @@ function renderTable(){
       ${(() => { const d=breakEvenDays(r);
         let txt,cls;
         if(d==null){txt='—';cls='text-gray-600';}
-        else if(d===0){txt=T('free','gratis');cls='text-green-400';}
+        else if(d===0){txt='0d';cls='text-green-400';}
         else if(!isFinite(d)){txt='∞';cls='text-red-400';}
         else{txt=d.toFixed(1)+'d';cls=d<=7?'text-green-400':d<=30?'text-yellow-500':'text-red-400';}
         const tt=T('Days of funding to recover the entry-spread cost','Días de funding para recuperar el costo del spread de entrada');
@@ -587,12 +591,12 @@ function tradeMath(r){
       : T('Entry spread: no price feed.','Spread de entrada: sin precio.'); }
   else {
     const entry=sp/100*cap;  // + = cost, − = credit
-    const feePct=roundTripFeesPct(r), feeAmt=feePct/100*cap;   // open+close both legs
+    const feePct=entryFrictionPct(r), feeAmt=feePct/100*cap;   // round-trip fees + entry slippage
     const costPct=sp+feePct, costAmt=costPct/100*cap;          // total friction to overcome
     entryLine = sp<0
       ? `<span class="text-green-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = +${fmtMoney(-entry)} ${T('credit','de crédito')}</span>`
       : `<span class="text-yellow-400">${T('Entry spread','Spread de entrada')} ${sp.toFixed(3)}% = −${fmtMoney(entry)} ${T('cost','de costo')}</span>`;
-    feeLine=`<span class="text-gray-400">${T('Est. round-trip fees','Fees ida y vuelta est.')} ~${feePct.toFixed(2)}% = −${fmtMoney(feeAmt)}</span>`;
+    feeLine=`<span class="text-gray-400">${T('Est. fees + slippage','Fees + slippage est.')} ~${feePct.toFixed(2)}% = −${fmtMoney(feeAmt)}</span>`;
     if(costPct<=0){
       beLine=T('Spread credit covers the fees — net positive from day 1.','El crédito del spread cubre los fees — positivo desde el día 1.');
     } else {
