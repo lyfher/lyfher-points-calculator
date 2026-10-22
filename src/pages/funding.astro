@@ -379,7 +379,7 @@ function deriveRow(row){
 function badge(ex,dir){
   const m=EX[ex]||{color:'#9ca3af',short:ex};
   const arrow=dir==='long'?'▲':'▼';
-  return `<span class="text-xs font-semibold px-2 py-0.5 rounded border" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${arrow} ${m.short}</span>`;
+  return `<span class="text-xs font-semibold px-2 py-0.5 rounded border whitespace-nowrap" style="color:${m.color};border-color:${m.color}55;background:${m.color}14">${arrow} ${m.short}</span>`;
 }
 function netColor(v){ return v>=30?'text-green-300':v>=12?'text-green-400':v>=5?'text-emerald-500':'text-gray-500'; }
 function sparkline(pts,color){

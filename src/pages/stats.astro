@@ -1,0 +1,212 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Lyfher — Trade Stats" description="Drop your perp trade export and see your volume, instrument split, top markets and estimated points — computed in your browser, nothing uploaded.">
+
+<!-- Hero -->
+<section class="hero-wrap text-center py-8">
+  <div class="ambient-glow"></div>
+  <h1 class="relative text-4xl sm:text-5xl font-bold text-white mb-3">
+    <span data-en="Trade" data-es="Trade">Trade</span> <span class="text-green-400">Stats</span>
+  </h1>
+  <p class="relative text-gray-400 text-base max-w-2xl mx-auto"
+     data-en="Drop your trade export (CSV) and see your volume, instrument split, top markets and estimated points. Everything is computed in your browser — nothing is uploaded."
+     data-es="Arrastra tu export de trades (CSV) y mira tu volumen, desglose por instrumento, mercados top y puntos estimados. Todo se calcula en tu navegador — no se sube nada.">
+    Drop your trade CSV — volume, breakdown and estimated points, all in your browser.
+  </p>
+</section>
+
+<!-- Dropzone -->
+<div id="drop" class="glow-card relative cursor-pointer rounded-2xl border-2 border-dashed border-gray-700 bg-gray-900/40 p-8 text-center mb-6" style="--c:#22c55e">
+  <input id="file" type="file" accept=".csv,text/csv" class="hidden" />
+  <div class="text-4xl mb-2 opacity-70">⬆</div>
+  <p class="text-gray-300 font-semibold" data-en="Drag your CSV here, or click to choose" data-es="Arrastra tu CSV aquí, o haz clic para elegir">Drag your CSV here, or click to choose</p>
+  <p class="text-gray-600 text-xs mt-1" data-en="Variational trade export (price × qty = volume). Fully local." data-es="Export de trades de Variational (price × qty = volumen). 100% local.">Variational trade export (price × qty = volume). Fully local.</p>
+  <p id="drop-err" class="text-red-400 text-sm mt-2 hidden"></p>
+</div>
+
+<!-- Results -->
+<div id="results" class="hidden">
+  <!-- top stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+      <div id="s-vol" class="text-2xl font-bold text-green-400">—</div>
+      <div class="text-xs text-gray-500 mt-0.5" data-en="Total volume" data-es="Volumen total">Total volume</div>
+    </div>
+    <div class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+      <div id="s-trades" class="text-2xl font-bold text-white">—</div>
+      <div class="text-xs text-gray-500 mt-0.5" data-en="Trades" data-es="Trades">Trades</div>
+    </div>
+    <div class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+      <div id="s-days" class="text-2xl font-bold text-blue-400">—</div>
+      <div class="text-xs text-gray-500 mt-0.5" data-en="Days active" data-es="Días activos">Days active</div>
+    </div>
+    <div class="lift-card bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
+      <div id="s-pts" class="text-2xl font-bold text-amber-300">—</div>
+      <div class="text-xs text-gray-500 mt-0.5 flex items-center justify-center gap-1">
+        <span data-en="Est. points" data-es="Puntos est.">Est. points</span>
+        <span class="text-gray-600">@</span>
+        <input id="rate" type="number" min="0" step="any" value="8" class="w-10 bg-gray-950 border border-gray-700 rounded px-1 text-center text-amber-300 text-xs" />
+        <span class="text-gray-600">/$1M</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- buy/sell + instrument -->
+  <div class="grid gap-4 sm:grid-cols-2 mb-6">
+    <div class="glow-card bg-gray-900 border border-gray-800 rounded-2xl p-4" style="--c:#22c55e">
+      <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3" data-en="By instrument" data-es="Por instrumento">By instrument</h2>
+      <div id="by-type"></div>
+    </div>
+    <div class="glow-card bg-gray-900 border border-gray-800 rounded-2xl p-4" style="--c:#60a5fa">
+      <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3" data-en="Buy vs Sell" data-es="Compra vs Venta">Buy vs Sell</h2>
+      <div id="by-side"></div>
+      <p id="dn-note" class="text-xs mt-3"></p>
+    </div>
+  </div>
+
+  <!-- top markets -->
+  <div class="glow-card bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6" style="--c:#a78bfa">
+    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3" data-en="Top markets" data-es="Mercados top">Top markets</h2>
+    <div id="by-coin"></div>
+  </div>
+
+  <!-- by day -->
+  <div class="glow-card bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6" style="--c:#4ade80">
+    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3" data-en="Volume by day" data-es="Volumen por día">Volume by day</h2>
+    <div id="by-day"></div>
+  </div>
+
+  <div class="text-center mb-8">
+    <button id="clear" class="text-sm text-gray-500 hover:text-amber-400 underline" data-en="clear / import another" data-es="limpiar / importar otro">clear / import another</button>
+  </div>
+</div>
+
+<section class="mt-2 border-t border-gray-800 pt-6 text-center">
+  <p class="text-gray-500 text-sm max-w-xl mx-auto"
+     data-en="Your file never leaves your device — it's parsed locally in your browser. Points are an estimate at the rate you set. Not financial advice."
+     data-es="Tu archivo nunca sale de tu dispositivo — se procesa localmente en tu navegador. Los puntos son una estimación a la tasa que pongas. No es asesoría financiera.">
+    Your file never leaves your device. Points are an estimate.
+  </p>
+</section>
+
+</Layout>
+
+<style is:global>
+  #drop.drag{ border-color:#22c55e; background:rgba(34,197,94,0.06); }
+  .barrow{ display:flex; align-items:center; gap:10px; padding:5px 0; font-size:.85rem; }
+  .barrow .lbl{ width:92px; flex:none; color:#cbd5e1; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .barrow .track{ flex:1; height:8px; border-radius:999px; background:#1b2531; overflow:hidden; }
+  .barrow .fill{ height:100%; border-radius:999px; transition:width .5s ease; }
+  .barrow .val{ width:118px; flex:none; text-align:right; font-family:ui-monospace,monospace; color:#9ca3af; font-size:.8rem; }
+</style>
+
+<script is:inline>
+const lang = () => document.documentElement.lang || 'en';
+const T = (en, es) => lang() === 'es' ? es : en;
+const $ = id => document.getElementById(id);
+const money = n => '$'+Math.round(n).toLocaleString('en-US');
+const moneyShort = n => n>=1e9?'$'+(n/1e9).toFixed(2)+'B':n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(1)+'K':'$'+Math.round(n);
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+let agg = null;   // last parsed aggregates
+
+function parseCSV(text){
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  if(lines.length<2) throw new Error(T('Empty file.','Archivo vacío.'));
+  const hdr = lines[0].split(',').map(h=>h.trim().toLowerCase());
+  const col = name => hdr.indexOf(name);
+  const iPrice=col('price'), iQty=col('qty'), iType=col('instrument_type'),
+        iU=col('underlying'), iSide=col('side'), iDate=col('created_at');
+  if(iPrice<0||iQty<0) throw new Error(T('No price/qty columns — is this a Variational trade export?','Sin columnas price/qty — ¿es un export de trades de Variational?'));
+  let vol=0, n=0; const byType={}, byU={}, byDay={}, side={buy:0,sell:0};
+  let minT=Infinity, maxT=-Infinity;
+  for(let i=1;i<lines.length;i++){
+    const c = lines[i].split(',');
+    const p=parseFloat(c[iPrice]), q=parseFloat(c[iQty]);
+    if(!isFinite(p)||!isFinite(q)) continue;
+    const v=p*q; vol+=v; n++;
+    if(iType>=0){ const k=c[iType]||'other'; byType[k]=(byType[k]||0)+v; }
+    if(iU>=0){ const k=c[iU]||'?'; byU[k]=(byU[k]||0)+v; }
+    if(iSide>=0){ const k=(c[iSide]||'').toLowerCase(); if(k==='buy'||k==='sell') side[k]+=v; }
+    if(iDate>=0){ const d=(c[iDate]||'').slice(0,10); if(d) byDay[d]=(byDay[d]||0)+v;
+      const t=Date.parse(c[iDate]); if(isFinite(t)){ if(t<minT)minT=t; if(t>maxT)maxT=t; } }
+  }
+  if(!n) throw new Error(T('No valid rows found.','No se encontraron filas válidas.'));
+  const days = isFinite(minT) ? Math.max(1, Object.keys(byDay).length) : null;
+  return {vol, n, byType, byU, byDay, side, days};
+}
+
+// width scales to the section's max; % is always share of total volume
+function bar(label, value, widthMax, pctTotal, color){
+  const w = widthMax>0 ? Math.max(3, value/widthMax*100) : 0;
+  const pct = pctTotal>0 ? value/pctTotal*100 : 0;
+  return `<div class="barrow">
+    <span class="lbl">${esc(label)}</span>
+    <span class="track"><span class="fill" style="width:${w}%;background:${color}"></span></span>
+    <span class="val">${moneyShort(value)} · ${pct.toFixed(1)}%</span>
+  </div>`;
+}
+
+function render(){
+  if(!agg) return;
+  $('s-vol').textContent = moneyShort(agg.vol);
+  $('s-trades').textContent = agg.n.toLocaleString('en-US');
+  $('s-days').textContent = agg.days ?? '—';
+  const rate = parseFloat($('rate').value)||0;
+  $('s-pts').textContent = (agg.vol/1e6*rate).toLocaleString('en-US',{maximumFractionDigits:1});
+
+  const typeColors = {perpetual_future:'#4ade80', swap:'#a78bfa', spot:'#60a5fa', other:'#9ca3af'};
+  const types = Object.entries(agg.byType).sort((a,b)=>b[1]-a[1]);
+  $('by-type').innerHTML = types.length
+    ? types.map(([k,v])=>bar(k.replace('perpetual_future','perp').replace(/_/g,' '), v, agg.vol, agg.vol, typeColors[k]||'#4ade80')).join('')
+    : `<p class="text-gray-600 text-sm">—</p>`;
+
+  const s=agg.side, st=s.buy+s.sell;
+  const imbalance = st>0 ? Math.abs(s.buy-s.sell)/st*100 : 0;
+  $('by-side').innerHTML = bar(T('Buy','Compra'), s.buy, st||1, st||1, '#22c55e') + bar(T('Sell','Venta'), s.sell, st||1, st||1, '#ef4444');
+  const dn=$('dn-note');
+  if(st>0){ dn.textContent = imbalance<10
+      ? T(`Well balanced — ${imbalance.toFixed(1)}% net skew (delta-neutral 👌)`, `Bien balanceado — ${imbalance.toFixed(1)}% de sesgo neto (delta-neutral 👌)`)
+      : T(`${imbalance.toFixed(1)}% skew toward ${s.buy>s.sell?'buys':'sells'}.`, `${imbalance.toFixed(1)}% de sesgo hacia ${s.buy>s.sell?'compras':'ventas'}.`);
+    dn.className = 'text-xs mt-3 '+(imbalance<10?'text-emerald-400':'text-amber-400');
+  } else dn.textContent='';
+
+  const coins = Object.entries(agg.byU).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const cmax = coins.length?coins[0][1]:1;
+  $('by-coin').innerHTML = coins.map(([k,v])=>bar(k, v, cmax, agg.vol, '#a78bfa')).join('') || `<p class="text-gray-600 text-sm">—</p>`;
+
+  const days = Object.entries(agg.byDay).sort();
+  const dmax = days.length?Math.max(...days.map(d=>d[1])):1;
+  $('by-day').innerHTML = days.map(([k,v])=>bar(k.slice(5), v, dmax, agg.vol, '#4ade80')).join('') || `<p class="text-gray-600 text-sm">—</p>`;
+
+  $('results').classList.remove('hidden');
+}
+
+function handleFile(file){
+  const err=$('drop-err'); err.classList.add('hidden');
+  if(!file){ return; }
+  if(!/\.csv$/i.test(file.name) && file.type!=='text/csv'){
+    err.textContent=T('Please choose a .csv file.','Elige un archivo .csv.'); err.classList.remove('hidden'); return;
+  }
+  const r=new FileReader();
+  r.onload = () => { try{ agg=parseCSV(String(r.result)); render();
+      $('results').scrollIntoView({behavior:'smooth',block:'start'}); }
+    catch(e){ err.textContent=e.message||String(e); err.classList.remove('hidden'); } };
+  r.onerror = () => { err.textContent=T('Could not read the file.','No se pudo leer el archivo.'); err.classList.remove('hidden'); };
+  r.readAsText(file);
+}
+
+$('drop').addEventListener('click', ()=>$('file').click());
+$('file').addEventListener('change', e=>handleFile(e.target.files[0]));
+['dragenter','dragover'].forEach(ev=>$('drop').addEventListener(ev, e=>{ e.preventDefault(); $('drop').classList.add('drag'); }));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev, e=>{ e.preventDefault(); $('drop').classList.remove('drag'); }));
+$('drop').addEventListener('drop', e=>{ const f=e.dataTransfer?.files?.[0]; if(f) handleFile(f); });
+$('rate').addEventListener('input', render);
+$('rate').addEventListener('click', e=>e.stopPropagation());
+$('clear').addEventListener('click', ()=>{ agg=null; $('file').value=''; $('results').classList.add('hidden'); window.scrollTo({top:0,behavior:'smooth'}); });
+
+const _setLang = window.setLang;
+window.setLang = l => { if(_setLang) _setLang(l); render(); };
+</script>
