@@ -1,0 +1,131 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Lyfher — Track Record" description="Live updates, calls and airdrop history from @LyfherCrypto. The farming journey, out in the open.">
+
+<!-- Hero -->
+<section class="hero-wrap text-center py-8">
+  <div class="hero-glow"></div>
+  <h1 class="relative text-4xl sm:text-5xl font-bold text-white mb-3">
+    <span data-en="Track" data-es="Track">Track</span>
+    <span class="text-green-400"> record</span>
+  </h1>
+  <p class="relative text-gray-400 text-base max-w-2xl mx-auto"
+     data-en="The farming journey in the open — live updates, calls and the drops as they land. Follow along on X."
+     data-es="El camino del farming a la vista — updates en vivo, calls y los drops a medida que caen. Sígueme en X.">
+    The farming journey in the open — follow along on X.
+  </p>
+</section>
+
+<div class="grid gap-8 lg:grid-cols-5 mb-8">
+  <!-- Airdrop timeline -->
+  <section class="lg:col-span-3">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-4 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-green-400"></span>
+      <span data-en="Airdrops received" data-es="Airdrops recibidos">Airdrops received</span>
+    </h2>
+    <div id="timeline"></div>
+  </section>
+
+  <!-- X feed -->
+  <section class="lg:col-span-2">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-4 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+      <span data-en="Latest on X" data-es="Último en X">Latest on X</span>
+    </h2>
+    <div class="feed-wrap rounded-2xl border border-gray-800 bg-gray-900/40 overflow-hidden">
+      <a class="twitter-timeline" data-theme="dark" data-chrome="noheader nofooter transparent"
+         data-height="620" data-dnt="true"
+         href="https://twitter.com/LyfherCrypto?ref_src=twsrc%5Etfw">Tweets by @LyfherCrypto</a>
+      <noscript><a href="https://twitter.com/LyfherCrypto" class="block p-4 text-sky-400 text-sm">@LyfherCrypto on X ↗</a></noscript>
+    </div>
+    <a href="https://twitter.com/LyfherCrypto" target="_blank" rel="noopener noreferrer"
+       class="mt-3 inline-flex items-center gap-1.5 text-sm text-sky-400 hover:text-sky-300 transition-colors">
+      <span data-en="Follow @LyfherCrypto" data-es="Seguir a @LyfherCrypto">Follow @LyfherCrypto</span> ↗
+    </a>
+  </section>
+</div>
+
+<section class="mt-2 border-t border-gray-800 pt-6 text-center">
+  <p class="text-gray-500 text-sm max-w-xl mx-auto"
+     data-en="Amounts are self-reported and rounded. Past rewards are not a guarantee of future ones. Not financial advice."
+     data-es="Los montos son auto-reportados y redondeados. Recompensas pasadas no garantizan futuras. No es asesoría financiera.">
+    Amounts are self-reported. Past rewards don't guarantee future ones. Not financial advice.
+  </p>
+</section>
+
+</Layout>
+
+<style is:global>
+  .hero-wrap{ position:relative; }
+  .hero-glow{
+    position:absolute; left:50%; top:30%; width:min(560px,90%); height:220px;
+    transform:translate(-50%,-50%); pointer-events:none; z-index:0;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(34,197,94,0.18), transparent 70%);
+    filter: blur(14px);
+  }
+
+  /* timeline items */
+  .tl{ position:relative; padding-left:1.75rem; }
+  .tl::before{ content:""; position:absolute; left:7px; top:4px; bottom:4px; width:2px;
+    background:linear-gradient(to bottom, #22c55e55, #1f2a3533); }
+  .tl-item{ position:relative; padding-bottom:1.25rem; }
+  .tl-item:last-child{ padding-bottom:0; }
+  .tl-dot{ position:absolute; left:-1.75rem; top:2px; width:16px; height:16px; border-radius:9999px;
+    background:#0a0e13; border:2px solid var(--c,#22c55e); box-shadow:0 0 10px -1px var(--c,#22c55e); }
+  .tl-card{ background:#111820; border:1px solid #1f2a35; border-radius:0.9rem; padding:0.85rem 1rem;
+    transition:border-color .2s ease, box-shadow .25s ease, transform .18s ease; }
+  .tl-card:hover{ transform:translateY(-2px); border-color:color-mix(in srgb, var(--c,#22c55e) 45%, #1f2a35);
+    box-shadow:0 10px 30px -14px color-mix(in srgb, var(--c,#22c55e) 55%, transparent); }
+
+  .feed-wrap{ min-height:200px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .tl-card{ transition:none; }
+    .tl-card:hover{ transform:none; }
+  }
+</style>
+
+<!-- X widgets -->
+<script is:inline async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+<script is:inline>
+const lang = () => document.documentElement.lang || 'en';
+const T = (en, es) => lang() === 'es' ? es : en;
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+// Fill these in as drops land. Leave [] and the section shows a placeholder.
+// { date:'Nov 2024', venue:'Hyperliquid', color:'#60a5fa', amount:'', note:'' }
+const AIRDROPS = [];
+
+function itemHTML(a){
+  return `<div class="tl-item">
+    <span class="tl-dot" style="--c:${a.color||'#22c55e'}"></span>
+    <div class="tl-card" style="--c:${a.color||'#22c55e'}">
+      <div class="flex items-center justify-between gap-2">
+        <span class="font-bold text-white">${esc(a.venue)}</span>
+        ${a.amount?`<span class="font-mono text-sm text-green-400 whitespace-nowrap">${esc(a.amount)}</span>`:''}
+      </div>
+      <div class="text-xs text-gray-500 mt-0.5">${esc(a.date||'')}</div>
+      ${a.note?`<p class="text-sm text-gray-400 mt-1.5 leading-relaxed">${esc(T(a.noteEn||a.note, a.noteEs||a.note))}</p>`:''}
+    </div>
+  </div>`;
+}
+
+function renderTimeline(){
+  const el = document.getElementById('timeline');
+  if(!AIRDROPS.length){
+    el.innerHTML = `<div class="rounded-2xl border border-dashed border-gray-800 bg-gray-900/30 p-6 text-center">
+      <p class="text-gray-400 text-sm">${T('Timeline coming soon — drops are being tracked. Follow on X for the live updates.','Timeline en camino — los drops se están registrando. Sígueme en X para los updates en vivo.')}</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div class="tl">${AIRDROPS.map(itemHTML).join('')}</div>`;
+}
+
+const _setLang = window.setLang;
+window.setLang = l => { if(_setLang) _setLang(l); renderTimeline(); };
+
+renderTimeline();
+</script>
