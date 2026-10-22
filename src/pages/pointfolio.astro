@@ -1,0 +1,224 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Lyfher — Pointfolio" description="Project your airdrop points across bear, base and bull valuations. Pick the farms you're in, enter your points, see your total in every scenario.">
+
+<!-- Hero -->
+<section class="hero-wrap text-center py-8">
+  <div class="hero-glow"></div>
+  <h1 class="relative text-4xl sm:text-5xl font-bold text-white mb-3">
+    Point<span class="text-green-400">folio</span>
+  </h1>
+  <p class="relative text-gray-400 text-base max-w-2xl mx-auto"
+     data-en="Pick the farms you're in, drop in your points, set your bear / base / bull value per point — and see what your whole points stack is worth in every scenario."
+     data-es="Elige los farms en los que estás, mete tus puntos, pon tu valor bear / base / bull por punto — y mira cuánto vale todo tu stack de puntos en cada escenario.">
+    Project your points across bear / base / bull — pick your farms, enter points, see the total.
+  </p>
+</section>
+
+<!-- Scenario totals -->
+<div class="grid grid-cols-3 gap-3 mb-6">
+  <div class="scn scn-bear rounded-2xl p-4 text-center">
+    <div class="scn-glow"></div>
+    <div class="relative text-xs font-semibold uppercase tracking-widest text-red-300/80" data-en="Bear" data-es="Bear">Bear</div>
+    <div id="tot-bear" class="relative text-2xl sm:text-3xl font-bold text-red-300 mt-1">$0</div>
+  </div>
+  <div class="scn scn-base rounded-2xl p-4 text-center">
+    <div class="scn-glow"></div>
+    <div class="relative text-xs font-semibold uppercase tracking-widest text-amber-300/80" data-en="Base" data-es="Base">Base</div>
+    <div id="tot-base" class="relative text-2xl sm:text-3xl font-bold text-amber-300 mt-1">$0</div>
+  </div>
+  <div class="scn scn-bull rounded-2xl p-4 text-center">
+    <div class="scn-glow"></div>
+    <div class="relative text-xs font-semibold uppercase tracking-widest text-green-300/80" data-en="Bull" data-es="Bull">Bull</div>
+    <div id="tot-bull" class="relative text-2xl sm:text-3xl font-bold text-green-300 mt-1">$0</div>
+  </div>
+</div>
+
+<div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+  <p class="text-xs text-gray-500" data-en="Toggle a farm on, enter your points and your $/point in each scenario." data-es="Activa un farm, pon tus puntos y tu $/punto en cada escenario.">Toggle a farm on, enter your points and your $/point.</p>
+  <button id="reset" class="text-xs text-gray-500 hover:text-amber-400 underline" data-en="reset" data-es="reiniciar">reset</button>
+</div>
+
+<!-- Project cards -->
+<div id="cards" class="grid gap-4 sm:grid-cols-2 mb-8"></div>
+
+<section class="mt-2 border-t border-gray-800 pt-6 text-center">
+  <p class="text-gray-500 text-sm max-w-xl mx-auto"
+     data-en="Values per point are your own assumptions, not predictions — most of these haven't had a TGE. Everything is saved only in your browser. Not financial advice."
+     data-es="Los valores por punto son tus propios supuestos, no predicciones — la mayoría aún no tiene TGE. Todo se guarda solo en tu navegador. No es asesoría financiera.">
+    Values per point are your own assumptions. Saved only in your browser.
+  </p>
+</section>
+
+</Layout>
+
+<style is:global>
+  .hero-wrap{ position:relative; }
+  .hero-glow{
+    position:absolute; left:50%; top:30%; width:min(560px,90%); height:220px;
+    transform:translate(-50%,-50%); pointer-events:none; z-index:0;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(34,197,94,0.18), transparent 70%);
+    filter: blur(14px);
+  }
+  /* scenario summary cards */
+  .scn{ position:relative; overflow:hidden; isolation:isolate; border:1px solid #1f2a35; background:#111820;
+    transition: transform .18s ease, box-shadow .3s ease; }
+  .scn-glow{ position:absolute; inset:-60% auto auto -20%; width:140%; height:160%; z-index:0; pointer-events:none;
+    opacity:.5; transition:opacity .3s ease; }
+  .scn-bear .scn-glow{ background:radial-gradient(40% 40% at 50% 0%, rgba(248,113,113,.22), transparent 70%); }
+  .scn-base .scn-glow{ background:radial-gradient(40% 40% at 50% 0%, rgba(251,191,36,.20), transparent 70%); }
+  .scn-bull .scn-glow{ background:radial-gradient(40% 40% at 50% 0%, rgba(74,222,128,.22), transparent 70%); }
+  .scn:hover{ transform:translateY(-2px); }
+  .scn-bear:hover{ box-shadow:0 14px 40px -16px rgba(248,113,113,.45); }
+  .scn-base:hover{ box-shadow:0 14px 40px -16px rgba(251,191,36,.45); }
+  .scn-bull:hover{ box-shadow:0 14px 40px -16px rgba(74,222,128,.45); }
+
+  /* project cards */
+  .pcard{ position:relative; overflow:hidden; isolation:isolate;
+    background: radial-gradient(130% 120% at 100% 0%, color-mix(in srgb, var(--c) 9%, transparent), transparent 55%), #111820;
+    border:1px solid #1f2a35; transition: transform .2s ease, border-color .2s ease, box-shadow .3s ease, opacity .2s ease; }
+  .pcard::before{ content:""; position:absolute; top:0; left:0; right:0; height:1px; z-index:2;
+    background:linear-gradient(90deg, transparent, var(--c), transparent); opacity:.35; transition:opacity .3s ease; }
+  .pcard-glow{ position:absolute; inset:-40% 40% auto -40%; height:180%; z-index:0; pointer-events:none;
+    background:radial-gradient(40% 40% at 20% 10%, color-mix(in srgb, var(--c) 20%, transparent), transparent 70%);
+    opacity:0; transition:opacity .35s ease; }
+  .pcard.on{ border-color: color-mix(in srgb, var(--c) 45%, #1f2a35); }
+  .pcard.on .pcard-glow{ opacity:.7; }
+  .pcard:hover{ transform:translateY(-3px);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--c) 20%,transparent), 0 14px 44px -14px color-mix(in srgb,var(--c) 45%,transparent); }
+  .pcard:hover::before{ opacity:.9; }
+  .pcard:not(.on){ opacity:.62; }
+  .pcard .pdot{ box-shadow:0 0 10px -1px var(--c); }
+
+  .pf-in{ width:100%; background:#0a0e13; border:1px solid #374151; border-radius:8px;
+    padding:6px 9px; color:#e5e7eb; font-family:ui-monospace,monospace; font-size:.85rem; outline:none;
+    transition:border-color .15s ease; }
+  .pf-in:focus{ border-color: color-mix(in srgb, var(--c) 70%, #374151); }
+  .pf-in::-webkit-outer-spin-button,.pf-in::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .pf-in[type=number]{ -moz-appearance:textfield; }
+
+  /* toggle switch */
+  .sw{ width:38px; height:22px; border-radius:999px; background:#374151; position:relative; cursor:pointer;
+    transition:background .2s ease; flex:none; }
+  .sw::after{ content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%;
+    background:#e5e7eb; transition:transform .2s ease; }
+  .pcard.on .sw{ background:var(--c); }
+  .pcard.on .sw::after{ transform:translateX(16px); }
+
+  @media (prefers-reduced-motion: reduce){
+    .scn,.pcard{ transition:none; } .scn:hover,.pcard:hover{ transform:none; }
+  }
+</style>
+
+<script is:inline>
+const lang = () => document.documentElement.lang || 'en';
+const T = (en, es) => lang() === 'es' ? es : en;
+
+// Starting set the user asked for. $/point defaults are editable assumptions.
+const PROJECTS = [
+  { key:'Variational',  color:'#a78bfa' },
+  { key:'TxFlow',       color:'#4ade80' },
+  { key:'Extended',     color:'#34d399' },
+  { key:'Lighter RH',   color:'#84cc16' },
+  { key:'Arcus',        color:'#f472b6' },
+  { key:'Pacifica',     color:'#22d3ee' },
+  { key:'RiseX',        color:'#e879f9' },
+  { key:'Ondo',         color:'#38bdf8' },
+];
+const DEF = { on:false, pts:'', bear:'1', base:'3', bull:'8' };   // default $/point assumptions
+
+const KEY='lyfher_pointfolio';
+let db={};
+try{ const s=localStorage.getItem(KEY); if(s) db=JSON.parse(s)||{}; }catch{}
+function stateOf(k){ return Object.assign({}, DEF, db[k]||{}); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch{} }
+
+const num = v => { const n=parseFloat(v); return isNaN(n)||n<0 ? 0 : n; };
+const money = n => '$'+Math.round(n).toLocaleString('en-US');
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function cardHTML(p){
+  const s = stateOf(p.key);
+  return `<div class="pcard rounded-2xl p-4 flex flex-col gap-3 ${s.on?'on':''}" style="--c:${p.color}" data-k="${esc(p.key)}">
+    <div class="pcard-glow"></div>
+    <div class="relative flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="pdot w-3 h-3 rounded-full shrink-0" style="background:${p.color}"></span>
+        <span class="font-bold text-white text-base truncate">${esc(p.key)}</span>
+      </div>
+      <div class="sw" role="switch" aria-checked="${s.on}" data-act="toggle"></div>
+    </div>
+    <div class="relative">
+      <label class="block text-[11px] text-gray-500 mb-1">${T('My points','Mis puntos')}</label>
+      <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" placeholder="0" value="${esc(s.pts)}" data-f="pts" />
+    </div>
+    <div class="relative grid grid-cols-3 gap-2">
+      <div>
+        <label class="block text-[11px] text-red-300/70 mb-1">${T('Bear $/pt','Bear $/pt')}</label>
+        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" value="${esc(s.bear)}" data-f="bear" />
+      </div>
+      <div>
+        <label class="block text-[11px] text-amber-300/70 mb-1">${T('Base $/pt','Base $/pt')}</label>
+        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" value="${esc(s.base)}" data-f="base" />
+      </div>
+      <div>
+        <label class="block text-[11px] text-green-300/70 mb-1">${T('Bull $/pt','Bull $/pt')}</label>
+        <input class="pf-in" type="number" min="0" step="any" inputmode="decimal" value="${esc(s.bull)}" data-f="bull" />
+      </div>
+    </div>
+    <div class="relative pt-1 flex items-center justify-between text-xs border-t border-gray-800/70 mt-1">
+      <span class="text-gray-500 mt-2">${T('Value','Valor')}</span>
+      <span class="pval mt-2 font-mono text-gray-300"></span>
+    </div>
+  </div>`;
+}
+
+function rowValue(s){
+  const pts=num(s.pts);
+  return { bear:pts*num(s.bear), base:pts*num(s.base), bull:pts*num(s.bull) };
+}
+function recompute(){
+  let tb=0,tm=0,tu=0;
+  PROJECTS.forEach(p=>{
+    const s=stateOf(p.key); const card=document.querySelector(`.pcard[data-k="${CSS.escape(p.key)}"]`);
+    const v=rowValue(s);
+    if(s.on){ tb+=v.bear; tm+=v.base; tu+=v.bull; }
+    if(card){ const el=card.querySelector('.pval');
+      el.textContent = s.on && num(s.pts)>0 ? `${money(v.bear)} · ${money(v.base)} · ${money(v.bull)}` : '—';
+      el.className = `pval mt-2 font-mono ${s.on&&num(s.pts)>0?'text-gray-300':'text-gray-600'}`; }
+  });
+  document.getElementById('tot-bear').textContent = money(tb);
+  document.getElementById('tot-base').textContent = money(tm);
+  document.getElementById('tot-bull').textContent = money(tu);
+}
+
+function render(){
+  document.getElementById('cards').innerHTML = PROJECTS.map(cardHTML).join('');
+  recompute();
+}
+
+document.getElementById('cards').addEventListener('click', e=>{
+  const sw = e.target.closest('[data-act="toggle"]'); if(!sw) return;
+  const card = sw.closest('.pcard'); const k = card.dataset.k;
+  const s = stateOf(k); s.on=!s.on; db[k]=s;
+  card.classList.toggle('on', s.on); sw.setAttribute('aria-checked', s.on);
+  save(); recompute();
+});
+document.getElementById('cards').addEventListener('input', e=>{
+  const inp = e.target.closest('.pf-in'); if(!inp) return;
+  const card = inp.closest('.pcard'); const k = card.dataset.k; const f = inp.dataset.f;
+  const s = stateOf(k); s[f]=inp.value; db[k]=s;
+  save(); recompute();
+});
+document.getElementById('reset').addEventListener('click', ()=>{
+  db={}; try{ localStorage.removeItem(KEY); }catch{}
+  render();
+});
+
+const _setLang = window.setLang;
+window.setLang = l => { if(_setLang) _setLang(l); render(); };
+
+render();
+</script>
