@@ -84,6 +84,12 @@ import Layout from '../layouts/Layout.astro';
     <label class="text-xs text-gray-500" data-en="Capital $" data-es="Capital $">Capital $</label>
     <input id="capital" type="number" min="0" step="1000" value="10000"
            class="w-24 bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500"/>
+    <label class="text-xs text-gray-500 flex items-center gap-1" title="Estimated price you give up per entry leg by crossing the book (taking liquidity). Feeds the break-even calc. Lower it for deep/liquid pairs, raise it for thin books.">
+      <span data-en="Slippage %/leg" data-es="Slippage %/leg">Slippage %/leg</span>
+      <span class="text-gray-600 cursor-help">ⓘ</span>
+    </label>
+    <input id="slip" type="number" min="0" step="0.005" value="1.5"
+           class="w-20 bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500"/>
   </div>
 </div>
 
@@ -266,7 +272,7 @@ function legFee(ex){ const f=TAKER_FEE[ex]; return f==null?FEE_DEFAULT:f; }
 function roundTripFeesPct(r){ return (legFee(r.long.ex)+legFee(r.short.ex))*2; }
 // Est. book-crossing slippage per entry fill (mid → taker). Entries aren't free even on 0-fee venues:
 // the entry spread is mid-to-mid, but you take liquidity, so you pay ~half the book spread on each leg.
-const SLIP_PER_LEG = 0.015;
+let SLIP_PER_LEG = 0.015;  // user-adjustable via the Slippage %/leg input (fraction, e.g. 0.015 = 1.5%)
 function entryFrictionPct(r){ return roundTripFeesPct(r) + SLIP_PER_LEG*2; }  // round-trip fees + slippage on the 2 entry legs
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -843,7 +849,7 @@ function stopCountdown(){ clearInterval(timer);$('stat-refresh').textContent='OF
 const PREFS_KEY='lyfher_prefs';
 function savePrefs(){ try{ localStorage.setItem(PREFS_KEY, JSON.stringify({
   search:$('search').value, minDepth:$('min-depth').value, maxSpread:$('max-spread').value,
-  minApr:$('min-apr').value, capital:$('capital').value, sortKey, sortDir, view, autoOn,
+  minApr:$('min-apr').value, capital:$('capital').value, slip:$('slip').value, sortKey, sortDir, view, autoOn,
   ex:[...enabledEx],
 })); }catch{} }
 function restorePrefs(){ try{ const p=JSON.parse(localStorage.getItem(PREFS_KEY)||'null'); if(!p) return null;
@@ -852,6 +858,7 @@ function restorePrefs(){ try{ const p=JSON.parse(localStorage.getItem(PREFS_KEY)
   if(p.maxSpread!=null)$('max-spread').value=p.maxSpread;
   if(p.minApr!=null)$('min-apr').value=p.minApr;
   if(p.capital!=null)$('capital').value=p.capital;
+  if(p.slip!=null){$('slip').value=p.slip; SLIP_PER_LEG=Math.max(0,(parseFloat(p.slip)||0)/100);}
   if(p.sortKey)sortKey=p.sortKey; if(p.sortDir)sortDir=p.sortDir;
   if(p.autoOn===false)autoOn=false;
   return p; }catch{ return null; } }
@@ -862,6 +869,7 @@ $('min-depth').addEventListener('change',()=>{ render(); savePrefs(); });
 $('max-spread').addEventListener('change',()=>{ render(); savePrefs(); });
 $('min-apr').addEventListener('change',()=>{ render(); savePrefs(); });
 $('capital').addEventListener('input',()=>{ render(); savePrefs(); });
+$('slip').addEventListener('input',()=>{ SLIP_PER_LEG=Math.max(0,(parseFloat($('slip').value)||0)/100); render(); savePrefs(); });
 $('dex-all').addEventListener('click',()=>{ enabledEx=new Set(Object.keys(EX)); renderDexChips(); render(); savePrefs(); });
 $('dex-none').addEventListener('click',()=>{ enabledEx=new Set(); renderDexChips(); render(); savePrefs(); });
 $('refresh-btn').addEventListener('click',()=>{ if(autoOn)startCountdown(); load(); });
