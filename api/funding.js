@@ -10,6 +10,13 @@ const TXFLOW_MAJORS = [
 
 const num = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
 const j = (r) => r.json();
+// fetch with a hard timeout so one slow/hung endpoint can't drag the whole serverless invocation to Vercel's limit
+async function tfetch(url, opts = {}, ms = 3500) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ac.signal }); }
+  finally { clearTimeout(t); }
+}
 const normCoin = (s) => String(s).replace(/[-_/].*$/, "").replace(/USDT$|USDC$|USD$|PERP$/i, "").toUpperCase();
 
 async function fetchExtended() {
@@ -58,15 +65,15 @@ async function fetchRiseX() {
 
 async function fetchTxflow() {
   const H = { "Content-Type": "application/json", "Origin": "https://app.txflow.com" };
-  const mr = await fetch("https://api.txflow.com/info", {
+  const mr = await tfetch("https://api.txflow.com/info", {
     method: "POST", headers: H, body: JSON.stringify({ type: "perpMeta" }),
-  });
+  }, 5000);
   if (!mr.ok) throw new Error("txflow meta " + mr.status);
   const uni = (await j(mr)).universe || [];
   const active = uni.filter((u) => u.name && !u.delisted && !u.haltTrading);  // fetch every listed market, not a majors whitelist, so new listings (memes, etc.) show up
   const entries = await Promise.allSettled(
     active.map(async (u) => {
-      const r = await fetch("https://api.txflow.com/info", {
+      const r = await tfetch("https://api.txflow.com/info", {
         method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: u.name }),
       });
       if (!r.ok) throw new Error("txflow ctx " + r.status);
