@@ -89,9 +89,10 @@ async function fetchTxflow() {
   }, 5000);
   if (!mr.ok) throw new Error("txflow meta " + mr.status);
   const uni = (await j(mr)).universe || [];
-  const active = uni.filter((u) => u.name && !u.delisted && !u.haltTrading);  // fetch every listed market, not a majors whitelist, so new listings (memes, etc.) show up
-  // bounded concurrency + retry-on-429: TxFlow has no bulk ctx endpoint, so ~250 markets each need their own request; firing them all at once got the Vercel IP rate-limited (429)
-  const entries = await pool(active, 12, async (u) => {
+  // TxFlow has no bulk ctx endpoint and rate-limits hard: fetching all ~250 markets one-by-one got the Vercel IP 429'd and took 15-20s. Cap to the majors set (covers the coins actually used for delta-neutral pairs, incl. top memes) so the venue stays reliable.
+  const majorSet = new Set(TXFLOW_MAJORS);
+  const active = uni.filter((u) => u.name && !u.delisted && !u.haltTrading && majorSet.has(normCoin(u.baseCurrency || u.name)));
+  const entries = await pool(active, 8, async (u) => {
     try {
       const r = await tfetch429("https://api.txflow.com/info", {
         method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: u.name }),
