@@ -72,9 +72,10 @@ const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label,
     ))}
 
     <!-- More coming soon placeholder -->
-    <div class="flex items-center justify-center rounded-2xl p-4 border border-dashed border-gray-800">
+    <div class="flex items-center justify-center gap-2 rounded-2xl p-4 border border-dashed border-gray-800">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-gray-700"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
       <span class="text-gray-700 text-sm"
-            data-en="🔜 More projects soon" data-es="🔜 Más proyectos pronto">🔜 More projects soon</span>
+            data-en="More projects soon" data-es="Más proyectos pronto">More projects soon</span>
     </div>
   </div>
 
@@ -155,7 +156,7 @@ const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label,
       <!-- header -->
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
         <div>
-          <div style="font-size:20px;font-weight:800;color:#fff">⚡ Lyfher <span style="color:#4ade80">Pointfolio</span></div>
+          <div style="font-size:20px;font-weight:800;color:#fff">Lyfher <span style="color:#4ade80">Pointfolio</span></div>
           <div style="font-size:12px;color:#6b7280;margin-top:2px">@LyfherCrypto · <span id="pf-date"></span></div>
         </div>
         <span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#4ade80;border:1px solid #4ade8055;background:#4ade8014;border-radius:8px;padding:4px 8px">EARLY</span>
@@ -166,9 +167,9 @@ const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label,
           <tr style="color:#6b7280;font-size:11px;text-transform:uppercase">
             <th style="text-align:left;padding:6px 12px">Project</th>
             <th style="text-align:right;padding:6px 12px">Points</th>
-            <th style="text-align:right;padding:6px 12px;color:#f87171">🐻 Bear</th>
-            <th style="text-align:right;padding:6px 12px;color:#facc15">📊 Base</th>
-            <th style="text-align:right;padding:6px 12px;color:#4ade80">🚀 Bull</th>
+            <th style="text-align:right;padding:6px 12px;color:#f87171">Bear</th>
+            <th style="text-align:right;padding:6px 12px;color:#facc15">Base</th>
+            <th style="text-align:right;padding:6px 12px;color:#4ade80">Bull</th>
           </tr>
         </thead>
         <tbody id="pf-body"></tbody>
@@ -190,7 +191,7 @@ const scenarioLabels = filteredProjects[0].scenarios.map(s => ({ label: s.label,
     </div>
     <!-- actions -->
     <div class="flex items-center justify-center gap-3 mt-4 flex-wrap">
-      <button onclick="downloadPointfolio()" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">⬇ <span data-en="Download PNG" data-es="Descargar PNG">Download PNG</span></button>
+      <button onclick="downloadPointfolio()" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> <span data-en="Download PNG" data-es="Descargar PNG">Download PNG</span></button>
       <button onclick="sharePointfolio()" class="inline-flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-sky-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">𝕏 <span data-en="Share on X" data-es="Compartir en X">Share on X</span></button>
       <button onclick="document.getElementById('pf-modal').classList.add('hidden')" class="text-gray-500 hover:text-white text-sm px-4 py-2.5" data-en="Close" data-es="Cerrar">Close</button>
     </div>

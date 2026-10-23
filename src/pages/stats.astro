@@ -20,7 +20,7 @@ import Layout from '../layouts/Layout.astro';
 <!-- Dropzone -->
 <div id="drop" class="glow-card relative cursor-pointer rounded-2xl border-2 border-dashed border-gray-700 bg-gray-900/40 p-8 text-center mb-6" style="--c:#22c55e">
   <input id="file" type="file" accept=".csv,text/csv" class="hidden" />
-  <div class="text-4xl mb-2 opacity-70">⬆</div>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="w-9 h-9 mx-auto mb-2 text-green-400/80"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/></svg>
   <p class="text-gray-300 font-semibold" data-en="Drag your CSV here, or click to choose" data-es="Arrastra tu CSV aquí, o haz clic para elegir">Drag your CSV here, or click to choose</p>
   <p class="text-gray-600 text-xs mt-1" data-en="Variational trade export (price × qty = volume). Fully local." data-es="Export de trades de Variational (price × qty = volumen). 100% local.">Variational trade export (price × qty = volume). Fully local.</p>
   <p id="drop-err" class="text-red-400 text-sm mt-2 hidden"></p>
@@ -168,7 +168,7 @@ function render(){
   $('by-side').innerHTML = bar(T('Buy','Compra'), s.buy, st||1, st||1, '#22c55e') + bar(T('Sell','Venta'), s.sell, st||1, st||1, '#ef4444');
   const dn=$('dn-note');
   if(st>0){ dn.textContent = imbalance<10
-      ? T(`Well balanced — ${imbalance.toFixed(1)}% net skew (delta-neutral 👌)`, `Bien balanceado — ${imbalance.toFixed(1)}% de sesgo neto (delta-neutral 👌)`)
+      ? T(`Well balanced — ${imbalance.toFixed(1)}% net skew (delta-neutral)`, `Bien balanceado — ${imbalance.toFixed(1)}% de sesgo neto (delta-neutral)`)
       : T(`${imbalance.toFixed(1)}% skew toward ${s.buy>s.sell?'buys':'sells'}.`, `${imbalance.toFixed(1)}% de sesgo hacia ${s.buy>s.sell?'compras':'ventas'}.`);
     dn.className = 'text-xs mt-3 '+(imbalance<10?'text-emerald-400':'text-amber-400');
   } else dn.textContent='';
