@@ -2,6 +2,8 @@
 // Returns normalized funding for Extended, RiseX and TxFlow.
 // Each entry: { coin, apr, px, oiUsd, volUsd }  (apr = annualized %, gross funding)
 
+export const config = { maxDuration: 30 };  // pooled TxFlow fetch is slower than a full fan-out; give it headroom
+
 const TXFLOW_MAJORS = [
   "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX","LINK","SUI","TON","TRX",
   "LTC","BCH","DOT","NEAR","APT","ARB","OP","INJ","TIA","SEI","PEPE","WIF",
@@ -16,6 +18,23 @@ async function tfetch(url, opts = {}, ms = 3500) {
   const t = setTimeout(() => ac.abort(), ms);
   try { return await fetch(url, { ...opts, signal: ac.signal }); }
   finally { clearTimeout(t); }
+}
+// retry on 429 (rate limit) with jittered backoff
+async function tfetch429(url, opts, ms = 3500, tries = 3) {
+  for (let a = 0; ; a++) {
+    const r = await tfetch(url, opts, ms);
+    if (r.status !== 429 || a >= tries - 1) return r;
+    await new Promise((res) => setTimeout(res, 250 + a * 350 + Math.random() * 200));
+  }
+}
+// run async tasks with bounded concurrency so we don't fan out 250 requests at once (→ 429)
+async function pool(items, limit, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) { const idx = i++; out[idx] = await fn(items[idx]); }
+  }));
+  return out;
 }
 const normCoin = (s) => String(s).replace(/[-_/].*$/, "").replace(/USDT$|USDC$|USD$|PERP$/i, "").toUpperCase();
 
@@ -65,18 +84,19 @@ async function fetchRiseX() {
 
 async function fetchTxflow() {
   const H = { "Content-Type": "application/json", "Origin": "https://app.txflow.com" };
-  const mr = await tfetch("https://api.txflow.com/info", {
+  const mr = await tfetch429("https://api.txflow.com/info", {
     method: "POST", headers: H, body: JSON.stringify({ type: "perpMeta" }),
   }, 5000);
   if (!mr.ok) throw new Error("txflow meta " + mr.status);
   const uni = (await j(mr)).universe || [];
   const active = uni.filter((u) => u.name && !u.delisted && !u.haltTrading);  // fetch every listed market, not a majors whitelist, so new listings (memes, etc.) show up
-  const entries = await Promise.allSettled(
-    active.map(async (u) => {
-      const r = await tfetch("https://api.txflow.com/info", {
+  // bounded concurrency + retry-on-429: TxFlow has no bulk ctx endpoint, so ~250 markets each need their own request; firing them all at once got the Vercel IP rate-limited (429)
+  const entries = await pool(active, 12, async (u) => {
+    try {
+      const r = await tfetch429("https://api.txflow.com/info", {
         method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: u.name }),
       });
-      if (!r.ok) throw new Error("txflow ctx " + r.status);
+      if (!r.ok) return null;
       const c = await j(r);
       const n = c.nodeCtx || {};
       const f = num(n.funding);            // hourly rate, ALREADY in percent (e.g. 0.00125 = 0.00125%/h)
@@ -90,9 +110,9 @@ async function fetchTxflow() {
         oiUsd: oi != null ? oi * px : null,
         volUsd: num(c.dayNtlVlm),
       };
-    })
-  );
-  return entries.filter((e) => e.status === "fulfilled" && e.value).map((e) => e.value);
+    } catch { return null; }
+  });
+  return entries.filter(Boolean);
 }
 
 async function fetchAster() {
