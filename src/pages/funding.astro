@@ -472,6 +472,17 @@ function renderTop(list){
   const sp=r.spread;
   const spTxt=sp==null?'—':(sp>=0?'+':'')+sp.toFixed(3)+'%';
   const spCls=sp==null?'text-gray-500':sp<=0.05?'text-green-400':'text-yellow-400';
+  const be=breakEvenDays(r);
+  let beTxt,beCls;
+  if(be==null){beTxt='—';beCls='text-gray-500';}
+  else if(be===0){beTxt='0d';beCls='text-green-400';}
+  else if(!isFinite(be)){beTxt='∞';beCls='text-red-400';}
+  else{beTxt=be.toFixed(1)+'d';beCls=be<=7?'text-green-400':be<=30?'text-yellow-500':'text-red-400';}
+  const su=sustainability(r.coin);
+  let suHtml;
+  if(!su) suHtml=`<span class="font-mono text-gray-500">—</span>`;
+  else if(!su.ready) suHtml=`<span class="font-mono text-gray-500">·· ${su.n}/${MIN_HIST}</span>`;
+  else{const sc=su.cons==='high'?'#22c55e':su.cons==='med'?'#eab308':'#ef4444';suHtml=`<span class="font-mono" style="color:${sc}">${su.score}%</span>`;}
   const why=sp!=null&&sp<=0
     ? T('Negative entry spread — they pay you to open.','Spread de entrada negativo — te pagan por abrir.')
     : (sp!=null&&sp<=0.05
@@ -490,6 +501,8 @@ function renderTop(list){
           <span class="text-2xl font-bold ${netColor(r.netAPR)}">+${r.netAPR.toFixed(2)}%<span class="text-xs font-medium text-gray-500 ml-1">APR</span></span>
           <span class="text-sm text-gray-400">${T('spread','spread')} <span class="font-mono ${spCls}">${spTxt}</span></span>
           <span class="text-sm text-gray-400">${T('depth','profundidad')} <span class="font-mono text-gray-200">${fmtMoney(r.depth)}</span></span>
+          <span class="text-sm text-gray-400">${T('break-even','break-even')} <span class="font-mono ${beCls}">${beTxt}</span></span>
+          <span class="text-sm text-gray-400">${T('consistency','consistencia')} ${suHtml}</span>
         </div>
         <div class="text-sm text-gray-400 mt-2">${why}</div>
       </div>
