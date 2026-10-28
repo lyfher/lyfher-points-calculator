@@ -117,10 +117,11 @@ async function fetchTxflow() {
 }
 
 async function fetchAster() {
-  const [r, fiRes, btRes] = await Promise.all([
+  const [r, fiRes, btRes, vtRes] = await Promise.all([
     fetch("https://fapi.asterdex.com/fapi/v1/premiumIndex"),
     fetch("https://fapi.asterdex.com/fapi/v1/fundingInfo").catch(() => null),
     fetch("https://fapi.asterdex.com/fapi/v1/ticker/bookTicker").catch(() => null),  // Aster markPrice lags badly → use book mid
+    fetch("https://fapi.asterdex.com/fapi/v1/ticker/24hr").catch(() => null),         // bulk 24h volume (one call) → also gates which markets are worth an OI lookup
   ]);
   if (!r.ok) throw new Error("aster " + r.status);
   const arr = await j(r);
@@ -128,6 +129,8 @@ async function fetchAster() {
   if (fiRes && fiRes.ok) { for (const x of await j(fiRes)) { const h = num(x.fundingIntervalHours); if (h) ivH[x.symbol] = h; } }
   const mid = {};                         // symbol -> book mid
   if (btRes && btRes.ok) { for (const x of await j(btRes)) { const b = num(x.bidPrice), a = num(x.askPrice); if (b != null && a != null) mid[x.symbol] = (b + a) / 2; } }
+  const vol = {};                         // symbol -> 24h USD (quote) volume
+  if (vtRes && vtRes.ok) { for (const x of await j(vtRes)) { const q = num(x.quoteVolume); if (q != null) vol[x.symbol] = q; } }
   const bySym = {};                       // normCoin -> { sym, f, px }
   for (const m of arr) {
     const f = num(m.lastFundingRate), px = mid[m.symbol];  // require a real book mid; no book (e.g. phantom forex) → skip, its mark is stale/synthetic
@@ -135,15 +138,18 @@ async function fetchAster() {
     const coin = normCoin(m.symbol);
     if (!bySym[coin] || /USDT$/.test(m.symbol)) bySym[coin] = { sym: m.symbol, f, px };  // funding fraction per interval; prefer USDT pair
   }
-  const majors = TXFLOW_MAJORS.filter((c) => bySym[c]);
+  // fetch OI for every market with >=$50K 24h volume (not just a majors whitelist) so liquid mid-caps/memes like DOOD get a real depth and aren't dropped by the min-depth filter
+  const liquid = Object.keys(bySym).filter((c) => (vol[bySym[c].sym] || 0) >= 50000);
   const oi = {};
-  await Promise.allSettled(majors.map(async (c) => {
-    const rr = await fetch("https://fapi.asterdex.com/fapi/v1/openInterest?symbol=" + bySym[c].sym);
-    if (rr.ok) { const o = num((await rr.json()).openInterest); if (o != null) oi[c] = o * bySym[c].px; }
-  }));
+  await pool(liquid, 20, async (c) => {
+    try {
+      const rr = await tfetch("https://fapi.asterdex.com/fapi/v1/openInterest?symbol=" + bySym[c].sym, {}, 2500);
+      if (rr.ok) { const o = num((await rr.json()).openInterest); if (o != null) oi[c] = o * bySym[c].px; }
+    } catch {}
+  });
   return Object.entries(bySym).map(([coin, v]) => {
     const h = ivH[v.sym] || 8;            // annualize by the market's real interval (default 8h), not a fixed 3/day
-    return { coin, apr: v.f * (24 / h) * 365 * 100, px: v.px, oiUsd: oi[coin] ?? null, volUsd: null, intervalH: h };
+    return { coin, apr: v.f * (24 / h) * 365 * 100, px: v.px, oiUsd: oi[coin] ?? null, volUsd: vol[v.sym] ?? null, intervalH: h };
   });
 }
 
