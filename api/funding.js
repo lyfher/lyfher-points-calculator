@@ -82,17 +82,39 @@ async function fetchRiseX() {
   return out;
 }
 
+// Hyperliquid 24h volume per coin (one bulk call) — a liquidity proxy to pick which TxFlow markets are worth fetching. {} if HL is unavailable.
+async function hlVolRanking() {
+  try {
+    const r = await tfetch("https://api.hyperliquid.xyz/info", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "metaAndAssetCtxs" }),
+    }, 4000);
+    if (!r.ok) return {};
+    const [meta, ctx] = await j(r);
+    const out = {};
+    (meta.universe || []).forEach((u, i) => { const v = num((ctx[i] || {}).dayNtlVlm); if (v != null) out[normCoin(u.name)] = v; });
+    return out;
+  } catch { return {}; }
+}
+
+const TXFLOW_BUDGET = 90;  // max TxFlow markets to fetch per refresh — enough to cover majors + liquid memes, low enough to stay under TxFlow's rate limit
+
 async function fetchTxflow() {
   const H = { "Content-Type": "application/json", "Origin": "https://app.txflow.com" };
-  const mr = await tfetch429("https://api.txflow.com/info", {
-    method: "POST", headers: H, body: JSON.stringify({ type: "perpMeta" }),
-  }, 5000);
+  const [mr, vol] = await Promise.all([
+    tfetch429("https://api.txflow.com/info", { method: "POST", headers: H, body: JSON.stringify({ type: "perpMeta" }) }, 5000),
+    hlVolRanking(),
+  ]);
   if (!mr.ok) throw new Error("txflow meta " + mr.status);
   const uni = (await j(mr)).universe || [];
-  // TxFlow has no bulk ctx endpoint and rate-limits hard: fetching all ~250 markets one-by-one got the Vercel IP 429'd and took 15-20s. Cap to the majors set (covers the coins actually used for delta-neutral pairs, incl. top memes) so the venue stays reliable.
+  const live = uni.filter((u) => u.name && !u.delisted && !u.haltTrading);
+  // TxFlow has no bulk ctx endpoint and rate-limits hard (bursts -> 429 ban), so we can't fetch all ~240 markets in real time. Fetch a budget of the most relevant: majors always, then fill by 24h volume (HL as liquidity proxy) so trending memes like BLUR surface without blowing the request count.
   const majorSet = new Set(TXFLOW_MAJORS);
-  const active = uni.filter((u) => u.name && !u.delisted && !u.haltTrading && majorSet.has(normCoin(u.baseCurrency || u.name)));
-  const entries = await pool(active, 8, async (u) => {
+  const seen = new Set();
+  const active = [];
+  for (const u of live) { const c = normCoin(u.baseCurrency || u.name); if (majorSet.has(c) && !seen.has(c)) { seen.add(c); active.push(u); } }
+  const byVol = live.slice().sort((a, b) => (vol[normCoin(b.baseCurrency || b.name)] || 0) - (vol[normCoin(a.baseCurrency || a.name)] || 0));
+  for (const u of byVol) { if (active.length >= TXFLOW_BUDGET) break; const c = normCoin(u.baseCurrency || u.name); if (!seen.has(c)) { seen.add(c); active.push(u); } }
+  const entries = await pool(active, 3, async (u) => {
     try {
       const r = await tfetch429("https://api.txflow.com/info", {
         method: "POST", headers: H, body: JSON.stringify({ type: "activeAssetCtx", coin: u.name }),
