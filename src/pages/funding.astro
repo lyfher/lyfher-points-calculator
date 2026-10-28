@@ -335,7 +335,8 @@ async function fetchVariational(){
   (j.listings||[]).forEach(x=>{ const f=parseFloat(x.funding_rate);
     const b=parseFloat(x.quotes?.base?.bid), a=parseFloat(x.quotes?.base?.ask);
     const px=(!isNaN(b)&&!isNaN(a))?(b+a)/2:parseFloat(x.mark_price);   // quotes mid is fresh; mark_price lags during fast moves
-    if(!isNaN(f)){ const oi=parseFloat(x.open_interest?.long_open_interest); const ivH=x.funding_interval_s?x.funding_interval_s/3600:null; out[normCoin(x.ticker)]={apr:f*100,px,oiUsd:!isNaN(oi)&&px?oi*px:null,volUsd:parseFloat(x.volume_24h)||null,intervalH:ivH}; } });
+    if(!isNaN(f)){ const oiL=parseFloat(x.open_interest?.long_open_interest), oiS=parseFloat(x.open_interest?.short_open_interest); const oi=Math.max(isNaN(oiL)?0:oiL,isNaN(oiS)?0:oiS);  // Variational splits long/short OI and they can be very lopsided; use the larger side, not just long, so depth isn't undercounted
+      const ivH=x.funding_interval_s?x.funding_interval_s/3600:null; out[normCoin(x.ticker)]={apr:f*100,px,oiUsd:oi>0&&px?oi*px:null,volUsd:parseFloat(x.volume_24h)||null,intervalH:ivH}; } });
   return {ex:'Variational',data:out};
 }
 async function fetchArcus(){
@@ -371,7 +372,11 @@ function buildRows(sources){
 function deriveRow(row){
   const legs=row.allLegs.filter(l=>enabledEx.has(l.ex)).sort((a,b)=>a.apr-b.apr);
   if(legs.length<2) return null;
-  const long=legs[0], short=legs[legs.length-1];   // long lowest apr, short highest
+  // Pick the pair among legs that each meet the active depth filter, so one thin outlier leg (e.g. a juicy but shallow venue) can't hide a coin that has a viable deeper pair. Fall back to all legs when <2 qualify — passFilters then handles it.
+  const md=parseFloat($('min-depth').value)||0;
+  const deep=md>0?legs.filter(l=>l.oiUsd!=null&&l.oiUsd>=md):legs;
+  const pick=deep.length>=2?deep:legs;
+  const long=pick[0], short=pick[pick.length-1];   // long lowest apr, short highest
   const netAPR=short.apr-long.apr;
   let spread=null, spreadNote=null;                 // signed entry spread: long px vs short px
   if(long.px&&short.px){
