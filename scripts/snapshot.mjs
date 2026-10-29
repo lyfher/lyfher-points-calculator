@@ -177,9 +177,26 @@ async function main() {
     };
   }
 
-  let hist = { updated: 0, points: {}, spreads: {}, alerts: {} };
+  let hist = { updated: 0, points: {}, spreads: {}, alerts: {}, basis: {} };
   try { hist = JSON.parse(await readFile(HIST_PATH, "utf8")); } catch { /* first run */ }
-  hist.points ||= {}; hist.spreads ||= {}; hist.alerts ||= {};
+  hist.points ||= {}; hist.spreads ||= {}; hist.alerts ||= {}; hist.basis ||= {};
+
+  // ── Perp↔Swap basis on Variational (for the Spread Scanner) ──────────
+  // Record the perp/swap mark ratio per pair; the page turns it into basis% + z-score.
+  try {
+    const vr = await fetch("https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats").then(j);
+    const byT = {}; (vr.listings || []).forEach((x) => { byT[x.ticker] = x; });
+    const vmid = (x) => { const b = num(x?.quotes?.base?.bid), a = num(x?.quotes?.base?.ask); return (b != null && a != null) ? (b + a) / 2 : num(x?.mark_price); };
+    for (const [key, perpT, swapT] of [["Gold", "XAU", "XAUS"], ["Silver", "XAG", "XAGS"], ["S&P 500", "US500", "US500S"]]) {
+      const p = byT[perpT], s = byT[swapT]; if (!p || !s) continue;
+      const pm = vmid(p), sm = vmid(s); if (pm == null || sm == null || sm === 0) continue;
+      (hist.basis[key] ||= []).push([now, Math.round((pm / sm) * 1e6) / 1e6]);
+    }
+    for (const key of Object.keys(hist.basis)) {
+      hist.basis[key] = hist.basis[key].filter((p) => p[0] >= now - WINDOW_MS);
+      if (!hist.basis[key].length) delete hist.basis[key];
+    }
+  } catch (e) { console.error("basis snapshot failed:", String(e)); }
 
   for (const [coin, s] of Object.entries(snapshot)) (hist.points[coin] ||= []).push([now, s.net]);
   for (const coin of Object.keys(hist.points)) {

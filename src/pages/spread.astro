@@ -1,0 +1,168 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Spread Scanner — Lyfher"
+  description="Perp vs Swap basis scanner on Variational. Spot when gold, silver and S&P 500 perps diverge from their spot swap and trade the convergence."
+>
+  <div class="mb-5">
+    <div class="flex items-center gap-3 mb-1">
+      <a href="/funding" class="text-gray-600 hover:text-gray-400 text-sm transition-colors">←</a>
+      <h1 class="text-2xl font-bold text-white" data-en="Spread Scanner" data-es="Scanner de Spread">Spread Scanner</h1>
+    </div>
+    <p class="text-gray-500 text-sm ml-7"
+       data-en="Perp vs Swap basis on Variational. When a perp drifts from its spot swap, long the cheap leg / short the dear one and capture the gap as they converge."
+       data-es="Basis perp vs swap en Variational. Cuando el perp se separa de su swap spot, pon long la pata barata / short la cara y captura la diferencia cuando converjan.">
+    </p>
+  </div>
+
+  <div id="status" class="text-xs text-gray-600 mb-4 ml-7"></div>
+  <div id="cards" class="grid gap-4 sm:grid-cols-2"></div>
+
+  <div class="mt-8 ml-1 text-xs text-gray-500 leading-relaxed max-w-2xl space-y-2">
+    <p data-en="How to read it:" data-es="Cómo leerlo:" class="font-semibold text-gray-400"></p>
+    <p data-en="• Basis = how far the perp trades above (+) or below (−) its spot swap. Gold & silver share the same underlying so fair basis is 0%. For S&P 500 the perp is the 1:10 SPDR ETF, so fair is the rolling mean ratio."
+       data-es="• Basis = cuánto cotiza el perp por encima (+) o por debajo (−) de su swap spot. Oro y plata comparten subyacente, así que el basis justo es 0%. En S&P 500 el perp es el ETF SPDR 1:10, así que lo justo es la media móvil del ratio."></p>
+    <p data-en="• z-score = how unusual today's basis is vs its own 7-day history. |z| ≥ 2 = stretched, mean-reversion edge. Needs a few hours of history to arm."
+       data-es="• z-score = qué tan inusual es el basis de hoy vs su historia de 7 días. |z| ≥ 2 = estirado, ventaja de reversión. Necesita unas horas de histórico para activarse."></p>
+    <p data-en="• The signal names which leg to long and which to short. You also keep (or pay) the perp funding while you wait — shown as carry."
+       data-es="• La señal indica qué pata va long y cuál short. Además te quedas (o pagas) el funding del perp mientras esperas — se muestra como carry."></p>
+    <p data-en="Not financial advice. Basis can stay stretched or widen; size for that."
+       data-es="No es asesoría financiera. El basis puede seguir estirado o ampliarse; dimensiona para eso." class="text-gray-600"></p>
+  </div>
+</Layout>
+
+<script is:inline>
+  const $ = (id) => document.getElementById(id);
+  const lang = () => localStorage.getItem('lang') || 'en';
+  const T = (en, es) => (lang() === 'es' ? es : en);
+
+  // Perp ↔ Swap pairs on Variational. fair = known fair ratio (metals share spot → 1); null = use rolling-mean ratio.
+  const PAIRS = [
+    { key: 'Gold',    es: 'Oro',   perp: 'XAU',   swap: 'XAUS',  fair: 1 },
+    { key: 'Silver',  es: 'Plata', perp: 'XAG',   swap: 'XAGS',  fair: 1 },
+    { key: 'S&P 500', es: 'S&P 500', perp: 'US500', swap: 'US500S', fair: null },
+  ];
+  const Z_SIGNAL = 2;          // |z| to flag an entry
+  const MIN_HIST = 6;          // history points before z/mean are trustworthy
+
+  let basisHist = {};          // { key: [[t, ratio], ...] }  from /history.json
+
+  const mid = (x) => {
+    const b = parseFloat(x?.quotes?.base?.bid), a = parseFloat(x?.quotes?.base?.ask);
+    return (!isNaN(b) && !isNaN(a)) ? (b + a) / 2 : parseFloat(x?.mark_price);
+  };
+  const fmtPx = (v) => v == null || isNaN(v) ? '—' : v >= 1000 ? v.toFixed(2) : v >= 1 ? v.toFixed(3) : v.toFixed(5);
+  const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+  const std = (a) => { const m = mean(a); return Math.sqrt(mean(a.map((x) => (x - m) ** 2))); };
+
+  function sparkline(vals, color) {
+    const v = vals.slice(-60); const n = v.length; if (n < 2) return '';
+    const w = 120, h = 30, pad = 2, mn = Math.min(...v), mx = Math.max(...v), rng = (mx - mn) || 1, step = (w - 2 * pad) / (n - 1);
+    const xy = (i) => [pad + i * step, h - pad - ((v[i] - mn) / rng) * (h - 2 * pad)];
+    const pts = v.map((_, i) => xy(i).map((n) => n.toFixed(1)).join(',')).join(' ');
+    const zeroY = h - pad - ((0 - mn) / rng) * (h - 2 * pad);
+    const zero = (0 >= mn && 0 <= mx) ? `<line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w - pad}" y2="${zeroY.toFixed(1)}" stroke="#4b5563" stroke-width="0.5" stroke-dasharray="2 2"/>` : '';
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" class="overflow-visible">${zero}<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+  }
+
+  function card(p, x) {
+    const perp = x[p.perp], swap = x[p.swap];
+    if (!perp || !swap) return `<div class="rounded-2xl border border-gray-800 bg-gray-900/40 p-4 text-sm text-gray-500">${p[lang() === 'es' ? 'es' : 'key']} — ${T('instruments unavailable', 'instrumentos no disponibles')}</div>`;
+
+    const pMid = mid(perp), sMid = mid(swap);
+    const ratio = pMid / sMid;
+
+    // reference ratio: known fair (metals) or rolling mean from history
+    const hist = (basisHist[p.key] || []).map((pt) => pt[1]).filter((r) => r > 0);
+    const haveHist = hist.length >= MIN_HIST;
+    const ref = p.fair != null ? p.fair : (hist.length ? mean(hist) : ratio);
+    const basis = (ratio / ref - 1) * 100;
+
+    // z-score on the basis series vs its own history
+    const histBasis = hist.map((r) => (r / ref - 1) * 100);
+    const sd = histBasis.length >= 2 ? std(histBasis) : null;
+    const mu = histBasis.length ? mean(histBasis) : 0;
+    const z = (haveHist && sd > 1e-9) ? (basis - mu) / sd : null;
+
+    const lo = histBasis.length ? Math.min(...histBasis, basis) : basis;
+    const hi = histBasis.length ? Math.max(...histBasis, basis) : basis;
+
+    // perp funding as carry (Variational funding_rate is an annualized fraction)
+    const fund = parseFloat(perp.funding_rate) * 100;
+
+    // signal
+    let sig = null, sigCls = 'text-gray-500';
+    const stretched = z != null ? Math.abs(z) >= Z_SIGNAL : Math.abs(basis) >= 0.15;
+    if (stretched) {
+      if (basis > 0) { // perp dear → short perp, long swap
+        sig = T(`Short ${p.perp} · Long ${p.swap}`, `Short ${p.perp} · Long ${p.swap}`);
+        sigCls = 'text-emerald-400';
+      } else {
+        sig = T(`Long ${p.perp} · Short ${p.swap}`, `Long ${p.perp} · Short ${p.swap}`);
+        sigCls = 'text-emerald-400';
+      }
+    } else {
+      sig = T('Neutral — wait', 'Neutral — esperar');
+    }
+
+    // carry note: short-perp earns funding if fund>0; long-perp earns if fund<0
+    const shortPerp = basis > 0;
+    const carryEarn = shortPerp ? fund > 0 : fund < 0;
+    const carryTxt = isNaN(fund) ? '' :
+      `${carryEarn ? '▲' : '▼'} ${T('carry', 'carry')} ${Math.abs(fund).toFixed(1)}%/yr ${carryEarn ? T('in your favor', 'a favor') : T('against', 'en contra')}`;
+
+    const basisCls = Math.abs(basis) >= 0.15 ? (basis > 0 ? 'text-amber-300' : 'text-sky-300') : 'text-gray-300';
+    const zCls = z == null ? 'text-gray-600' : Math.abs(z) >= Z_SIGNAL ? 'text-amber-300 font-bold' : 'text-gray-400';
+    const name = lang() === 'es' ? p.es : p.key;
+
+    return `
+      <div class="rounded-2xl border border-gray-800 bg-gray-900/40 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="font-bold text-white">${name}</div>
+          <div class="text-[11px] text-gray-500 font-mono">${p.perp} / ${p.swap}</div>
+        </div>
+        <div class="flex items-end gap-4 mb-3">
+          <div>
+            <div class="text-[10px] uppercase tracking-wide text-gray-600">${T('basis', 'basis')}</div>
+            <div class="text-2xl font-mono font-bold ${basisCls}">${basis >= 0 ? '+' : ''}${basis.toFixed(3)}%</div>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase tracking-wide text-gray-600">z-score</div>
+            <div class="text-lg font-mono ${zCls}">${z == null ? '—' : (z >= 0 ? '+' : '') + z.toFixed(1)}</div>
+          </div>
+          <div class="ml-auto">${sparkline(histBasis.concat(basis), basis > 0 ? '#fbbf24' : '#38bdf8')}</div>
+        </div>
+        <div class="text-sm font-semibold ${sigCls} mb-2">${sig}</div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
+          <div>${T('perp', 'perp')} <span class="font-mono text-gray-300">${fmtPx(pMid)}</span></div>
+          <div>${T('swap', 'swap')} <span class="font-mono text-gray-300">${fmtPx(sMid)}</span></div>
+          <div>${T('7d range', 'rango 7d')} <span class="font-mono text-gray-400">${lo.toFixed(2)}% / ${hi.toFixed(2)}%</span></div>
+          <div>${carryTxt ? `<span class="${carryEarn ? 'text-emerald-500' : 'text-rose-500'}">${carryTxt}</span>` : ''}</div>
+        </div>
+        ${!haveHist ? `<div class="text-[11px] text-gray-600 mt-2">${T('building history — z-score arms after a few hours', 'acumulando histórico — el z-score se activa en unas horas')}</div>` : ''}
+      </div>`;
+  }
+
+  async function load() {
+    try {
+      const hr = await fetch('/history.json', { cache: 'no-store' });
+      if (hr.ok) { const h = await hr.json(); basisHist = h.basis || {}; }
+    } catch {}
+    try {
+      const r = await fetch('https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats');
+      const j = await r.json();
+      const byT = {};
+      (j.listings || []).forEach((x) => { byT[x.ticker] = x; });
+      $('cards').innerHTML = PAIRS.map((p) => card(p, byT)).join('');
+      $('status').textContent = T('Live · updates every 25s · ', 'En vivo · actualiza cada 25s · ') + new Date().toLocaleTimeString();
+    } catch (e) {
+      $('status').textContent = T('Could not reach Variational — retrying…', 'No se pudo conectar a Variational — reintentando…');
+    }
+  }
+
+  load();
+  setInterval(load, 25000);
+  window.addEventListener('storage', (e) => { if (e.key === 'lang') load(); });
+</script>
