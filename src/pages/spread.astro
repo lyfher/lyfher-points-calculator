@@ -6,30 +6,47 @@ import Layout from '../layouts/Layout.astro';
   title="Spread Scanner — Lyfher"
   description="Perp vs Swap basis scanner on Variational. Spot when gold, silver and S&P 500 perps diverge from their spot swap and trade the convergence."
 >
-  <div class="mb-5">
+  <div class="mb-4">
     <div class="flex items-center gap-3 mb-1">
       <a href="/funding" class="text-gray-600 hover:text-gray-400 text-sm transition-colors">←</a>
-      <h1 class="text-2xl font-bold text-white" data-en="Spread Scanner" data-es="Scanner de Spread">Spread Scanner</h1>
+      <h1 class="text-2xl font-bold text-white tracking-tight" data-en="Spread Scanner" data-es="Scanner de Spread">Spread Scanner</h1>
+      <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">Variational</span>
     </div>
-    <p class="text-gray-500 text-sm ml-7"
-       data-en="Perp vs Swap basis on Variational. When a perp drifts from its spot swap, long the cheap leg / short the dear one and capture the gap as they converge."
-       data-es="Basis perp vs swap en Variational. Cuando el perp se separa de su swap spot, pon long la pata barata / short la cara y captura la diferencia cuando converjan.">
+    <p class="text-gray-500 text-sm ml-7 max-w-2xl"
+       data-en="Perp vs Swap basis. When a perp drifts from its spot swap, long the cheap leg / short the dear one and capture the gap as they converge."
+       data-es="Basis perp vs swap. Cuando el perp se separa de su swap spot, pon long la pata barata / short la cara y captura la diferencia cuando converjan.">
     </p>
   </div>
 
-  <div id="status" class="text-xs text-gray-600 mb-4 ml-7"></div>
+  <!-- Toolbar -->
+  <div class="flex items-center justify-between ml-7 mb-5">
+    <div class="flex items-center gap-2 text-xs text-gray-500">
+      <span id="live-dot" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+      <span id="status">—</span>
+    </div>
+    <button id="refresh" class="group flex items-center gap-1.5 text-xs font-medium text-gray-300 bg-gray-900 border border-gray-800 rounded-lg px-3 py-1.5 hover:border-gray-600 hover:text-white transition-colors">
+      <svg id="refresh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      <span data-en="Refresh" data-es="Actualizar">Refresh</span>
+    </button>
+  </div>
+
   <div id="cards" class="grid gap-4 sm:grid-cols-2"></div>
 
-  <div class="mt-8 ml-1 text-xs text-gray-500 leading-relaxed max-w-2xl space-y-2">
-    <p data-en="How to read it:" data-es="Cómo leerlo:" class="font-semibold text-gray-400"></p>
-    <p data-en="• Basis = how far the perp trades above (+) or below (−) its spot swap. Gold & silver share the same underlying so fair basis is 0%. For S&P 500 the perp is the 1:10 SPDR ETF, so fair is the rolling mean ratio."
-       data-es="• Basis = cuánto cotiza el perp por encima (+) o por debajo (−) de su swap spot. Oro y plata comparten subyacente, así que el basis justo es 0%. En S&P 500 el perp es el ETF SPDR 1:10, así que lo justo es la media móvil del ratio."></p>
-    <p data-en="• z-score = how unusual today's basis is vs its own 7-day history. |z| ≥ 2 = stretched, mean-reversion edge. Needs a few hours of history to arm."
-       data-es="• z-score = qué tan inusual es el basis de hoy vs su historia de 7 días. |z| ≥ 2 = estirado, ventaja de reversión. Necesita unas horas de histórico para activarse."></p>
-    <p data-en="• The signal names which leg to long and which to short. You also keep (or pay) the perp funding while you wait — shown as carry."
-       data-es="• La señal indica qué pata va long y cuál short. Además te quedas (o pagas) el funding del perp mientras esperas — se muestra como carry."></p>
-    <p data-en="Not financial advice. Basis can stay stretched or widen; size for that."
-       data-es="No es asesoría financiera. El basis puede seguir estirado o ampliarse; dimensiona para eso." class="text-gray-600"></p>
+  <!-- Legend / how to read -->
+  <div class="mt-8 ml-1 rounded-2xl border border-gray-800/80 bg-gray-900/30 p-5 text-xs text-gray-500 leading-relaxed max-w-3xl">
+    <p data-en="How to read it" data-es="Cómo leerlo" class="font-semibold text-gray-300 mb-2 text-sm"></p>
+    <div class="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+      <p data-en="Basis — how far the perp trades above (premium) or below (discount) its spot swap. Gold & silver share the same underlying, so fair is 0%. For S&P 500 the perp is the 1:10 SPDR ETF, so fair is the rolling mean ratio."
+         data-es="Basis — cuánto cotiza el perp por encima (premium) o por debajo (discount) de su swap spot. Oro y plata comparten subyacente, así que lo justo es 0%. En S&P 500 el perp es el ETF SPDR 1:10, así que lo justo es la media móvil del ratio."></p>
+      <p data-en="z-score — how unusual today's basis is vs its own 7-day history. |z| ≥ 2 = stretched, mean-reversion edge. Arms after a few hours of history."
+         data-es="z-score — qué tan inusual es el basis de hoy vs su historia de 7 días. |z| ≥ 2 = estirado, ventaja de reversión. Se activa tras unas horas de histórico."></p>
+      <p data-en="The meter shows where the current basis sits inside its 7-day range. Near an edge = stretched. The signal names which leg to long and which to short."
+         data-es="El medidor muestra dónde cae el basis actual dentro de su rango de 7 días. Cerca de un borde = estirado. La señal indica qué pata va long y cuál short."></p>
+      <p data-en="Carry — the perp funding you keep (or pay) while you wait for convergence. In your favor = time is on your side."
+         data-es="Carry — el funding del perp que cobras (o pagas) mientras esperas la convergencia. A favor = el tiempo juega a tu favor."></p>
+    </div>
+    <p data-en="Not financial advice. Basis can stay stretched or widen further; size for that."
+       data-es="No es asesoría financiera. El basis puede seguir estirado o ampliarse más; dimensiona para eso." class="text-gray-600 mt-3 pt-3 border-t border-gray-800/60"></p>
   </div>
 </Layout>
 
@@ -40,128 +57,179 @@ import Layout from '../layouts/Layout.astro';
 
   // Perp ↔ Swap pairs on Variational. fair = known fair ratio (metals share spot → 1); null = use rolling-mean ratio.
   const PAIRS = [
-    { key: 'Gold',    es: 'Oro',   perp: 'XAU',   swap: 'XAUS',  fair: 1 },
-    { key: 'Silver',  es: 'Plata', perp: 'XAG',   swap: 'XAGS',  fair: 1 },
-    { key: 'S&P 500', es: 'S&P 500', perp: 'US500', swap: 'US500S', fair: null },
+    { key: 'Gold',    es: 'Oro',     perp: 'XAU',   swap: 'XAUS',   fair: 1,    c: '#fbbf24' },
+    { key: 'Silver',  es: 'Plata',   perp: 'XAG',   swap: 'XAGS',   fair: 1,    c: '#cbd5e1' },
+    { key: 'S&P 500', es: 'S&P 500', perp: 'US500', swap: 'US500S', fair: null, c: '#60a5fa' },
   ];
   const Z_SIGNAL = 2;          // |z| to flag an entry
   const MIN_HIST = 6;          // history points before z/mean are trustworthy
+  const NEAR = 0.05;           // |basis%| below this = effectively at fair
 
   let basisHist = {};          // { key: [[t, ratio], ...] }  from /history.json
 
-  const mid = (x) => {
+  const midOf = (x) => {
     const b = parseFloat(x?.quotes?.base?.bid), a = parseFloat(x?.quotes?.base?.ask);
     return (!isNaN(b) && !isNaN(a)) ? (b + a) / 2 : parseFloat(x?.mark_price);
   };
-  const fmtPx = (v) => v == null || isNaN(v) ? '—' : v >= 1000 ? v.toFixed(2) : v >= 1 ? v.toFixed(3) : v.toFixed(5);
+  const fmtPx = (v) => v == null || isNaN(v) ? '—' : v >= 1000 ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v >= 1 ? v.toFixed(3) : v.toFixed(5);
   const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
   const std = (a) => { const m = mean(a); return Math.sqrt(mean(a.map((x) => (x - m) ** 2))); };
 
+  // area-filled sparkline with a dashed zero line
   function sparkline(vals, color) {
-    const v = vals.slice(-60); const n = v.length; if (n < 2) return '';
-    const w = 120, h = 30, pad = 2, mn = Math.min(...v), mx = Math.max(...v), rng = (mx - mn) || 1, step = (w - 2 * pad) / (n - 1);
+    const v = vals.slice(-72); const n = v.length; if (n < 2) return '<div class="h-[42px]"></div>';
+    const w = 150, h = 42, pad = 3, mn = Math.min(...v, 0), mx = Math.max(...v, 0), rng = (mx - mn) || 1, step = (w - 2 * pad) / (n - 1);
     const xy = (i) => [pad + i * step, h - pad - ((v[i] - mn) / rng) * (h - 2 * pad)];
-    const pts = v.map((_, i) => xy(i).map((n) => n.toFixed(1)).join(',')).join(' ');
+    const line = v.map((_, i) => xy(i).map((k) => k.toFixed(1)).join(',')).join(' ');
+    const [fx] = xy(0), [lx] = xy(n - 1);
+    const area = `${fx.toFixed(1)},${(h - pad).toFixed(1)} ${line} ${lx.toFixed(1)},${(h - pad).toFixed(1)}`;
     const zeroY = h - pad - ((0 - mn) / rng) * (h - 2 * pad);
-    const zero = (0 >= mn && 0 <= mx) ? `<line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w - pad}" y2="${zeroY.toFixed(1)}" stroke="#4b5563" stroke-width="0.5" stroke-dasharray="2 2"/>` : '';
-    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" class="overflow-visible">${zero}<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+    const gid = 'g' + Math.random().toString(36).slice(2, 7);
+    const [dx, dy] = xy(n - 1);
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" class="overflow-visible">
+      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.28"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${area}" fill="url(#${gid})"/>
+      <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w - pad}" y2="${zeroY.toFixed(1)}" stroke="#475569" stroke-width="0.5" stroke-dasharray="2 2"/>
+      <polyline points="${line}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="2.1" fill="${color}"/>
+    </svg>`;
+  }
+
+  // range meter: shows where current basis sits within its 7d [lo,hi] band, with a 0 tick
+  function meter(lo, hi, cur, color) {
+    const min = Math.min(lo, 0, cur), max = Math.max(hi, 0, cur), span = (max - min) || 1;
+    const padf = span * 0.12, d0 = min - padf, d1 = max + padf, dspan = d1 - d0;
+    const X = (v) => ((v - d0) / dspan) * 100;
+    const bandL = X(lo), bandR = X(hi), zx = X(0), cx = X(cur);
+    return `<div class="relative h-6 mt-1">
+      <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[3px] rounded-full bg-gray-800"></div>
+      <div class="absolute top-1/2 -translate-y-1/2 h-[3px] rounded-full" style="left:${bandL}%;width:${Math.max(bandR - bandL, 0.5)}%;background:${color}44"></div>
+      <div class="absolute top-1/2 -translate-y-1/2 w-px h-3 bg-gray-600" style="left:${zx}%"></div>
+      <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-gray-950" style="left:${cx}%;background:${color};box-shadow:0 0 8px ${color}99"></div>
+    </div>`;
   }
 
   function card(p, x) {
+    const name = lang() === 'es' ? p.es : p.key;
     const perp = x[p.perp], swap = x[p.swap];
-    if (!perp || !swap) return `<div class="rounded-2xl border border-gray-800 bg-gray-900/40 p-4 text-sm text-gray-500">${p[lang() === 'es' ? 'es' : 'key']} — ${T('instruments unavailable', 'instrumentos no disponibles')}</div>`;
+    if (!perp || !swap) return `<div class="rounded-2xl border border-gray-800 bg-gray-900/40 p-5 text-sm text-gray-500">${name} — ${T('instruments unavailable', 'instrumentos no disponibles')}</div>`;
 
-    const pMid = mid(perp), sMid = mid(swap);
+    const pMid = midOf(perp), sMid = midOf(swap);
     const ratio = pMid / sMid;
 
-    // reference ratio: known fair (metals) or rolling mean from history
     const hist = (basisHist[p.key] || []).map((pt) => pt[1]).filter((r) => r > 0);
     const haveHist = hist.length >= MIN_HIST;
     const ref = p.fair != null ? p.fair : (hist.length ? mean(hist) : ratio);
     const basis = (ratio / ref - 1) * 100;
 
-    // z-score on the basis series vs its own history
     const histBasis = hist.map((r) => (r / ref - 1) * 100);
     const sd = histBasis.length >= 2 ? std(histBasis) : null;
     const mu = histBasis.length ? mean(histBasis) : 0;
     const z = (haveHist && sd > 1e-9) ? (basis - mu) / sd : null;
+    const lo = histBasis.length ? Math.min(...histBasis, basis) : basis - 0.01;
+    const hi = histBasis.length ? Math.max(...histBasis, basis) : basis + 0.01;
 
-    const lo = histBasis.length ? Math.min(...histBasis, basis) : basis;
-    const hi = histBasis.length ? Math.max(...histBasis, basis) : basis;
+    const fund = parseFloat(perp.funding_rate) * 100;   // annualized %, Variational
+    const atFair = Math.abs(basis) < NEAR;
 
-    // perp funding as carry (Variational funding_rate is an annualized fraction)
-    const fund = parseFloat(perp.funding_rate) * 100;
+    // direction pill
+    const dir = atFair ? { t: T('At fair', 'En su justo'), cls: 'bg-gray-700/40 text-gray-400 border-gray-600/40' }
+      : basis > 0 ? { t: T('Perp premium', 'Perp premium'), cls: 'bg-amber-500/10 text-amber-300 border-amber-500/25' }
+      : { t: T('Perp discount', 'Perp discount'), cls: 'bg-sky-500/10 text-sky-300 border-sky-500/25' };
 
     // signal
-    let sig = null, sigCls = 'text-gray-500';
-    const stretched = z != null ? Math.abs(z) >= Z_SIGNAL : Math.abs(basis) >= 0.15;
+    const stretched = z != null ? Math.abs(z) >= Z_SIGNAL : Math.abs(basis) >= 0.3;
+    let sig, sigCls;
     if (stretched) {
-      if (basis > 0) { // perp dear → short perp, long swap
-        sig = T(`Short ${p.perp} · Long ${p.swap}`, `Short ${p.perp} · Long ${p.swap}`);
-        sigCls = 'text-emerald-400';
-      } else {
-        sig = T(`Long ${p.perp} · Short ${p.swap}`, `Long ${p.perp} · Short ${p.swap}`);
-        sigCls = 'text-emerald-400';
-      }
+      const longLeg = basis > 0 ? p.swap : p.perp, shortLeg = basis > 0 ? p.perp : p.swap;
+      sig = `${T('Enter', 'Entrar')}: ▲ ${T('Long', 'Long')} ${longLeg} · ▼ ${T('Short', 'Short')} ${shortLeg}`;
+      sigCls = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
     } else {
-      sig = T('Neutral — wait', 'Neutral — esperar');
+      sig = T('Neutral — wait for a stretch', 'Neutral — espera un estiramiento');
+      sigCls = 'bg-gray-800/60 text-gray-400 border-gray-700/50';
     }
 
-    // carry note: short-perp earns funding if fund>0; long-perp earns if fund<0
     const shortPerp = basis > 0;
     const carryEarn = shortPerp ? fund > 0 : fund < 0;
-    const carryTxt = isNaN(fund) ? '' :
-      `${carryEarn ? '▲' : '▼'} ${T('carry', 'carry')} ${Math.abs(fund).toFixed(1)}%/yr ${carryEarn ? T('in your favor', 'a favor') : T('against', 'en contra')}`;
+    const carryTxt = isNaN(fund) || fund === 0 ? null :
+      `${Math.abs(fund).toFixed(1)}%/yr ${carryEarn ? T('in favor', 'a favor') : T('against', 'en contra')}`;
 
-    const basisCls = Math.abs(basis) >= 0.15 ? (basis > 0 ? 'text-amber-300' : 'text-sky-300') : 'text-gray-300';
-    const zCls = z == null ? 'text-gray-600' : Math.abs(z) >= Z_SIGNAL ? 'text-amber-300 font-bold' : 'text-gray-400';
-    const name = lang() === 'es' ? p.es : p.key;
+    const basisCls = atFair ? 'text-gray-300' : basis > 0 ? 'text-amber-300' : 'text-sky-300';
+    const zCls = z == null ? 'text-gray-600' : Math.abs(z) >= Z_SIGNAL ? 'text-amber-300' : 'text-gray-300';
+    const spark = sparkline(histBasis.concat(basis), basis >= 0 ? '#fbbf24' : '#38bdf8');
 
     return `
-      <div class="rounded-2xl border border-gray-800 bg-gray-900/40 p-4">
-        <div class="flex items-center justify-between mb-2">
-          <div class="font-bold text-white">${name}</div>
-          <div class="text-[11px] text-gray-500 font-mono">${p.perp} / ${p.swap}</div>
-        </div>
-        <div class="flex items-end gap-4 mb-3">
-          <div>
-            <div class="text-[10px] uppercase tracking-wide text-gray-600">${T('basis', 'basis')}</div>
-            <div class="text-2xl font-mono font-bold ${basisCls}">${basis >= 0 ? '+' : ''}${basis.toFixed(3)}%</div>
+      <div class="glow-card rounded-2xl border border-gray-800 bg-gradient-to-b from-gray-900/60 to-gray-900/20 p-5" style="--c:${p.c}">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" style="background:${p.c}"></span>
+            <span class="font-bold text-white text-[15px]">${name}</span>
           </div>
+          <span class="text-[10px] text-gray-500 font-mono tracking-tight">${p.perp} / ${p.swap}</span>
+        </div>
+
+        <div class="flex items-start justify-between gap-3">
           <div>
-            <div class="text-[10px] uppercase tracking-wide text-gray-600">z-score</div>
-            <div class="text-lg font-mono ${zCls}">${z == null ? '—' : (z >= 0 ? '+' : '') + z.toFixed(1)}</div>
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="text-[10px] uppercase tracking-wider text-gray-500">${T('basis', 'basis')}</span>
+              <span class="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${dir.cls}">${dir.t}</span>
+            </div>
+            <div class="text-[28px] leading-none font-mono font-bold ${basisCls}">${basis >= 0 ? '+' : ''}${basis.toFixed(3)}<span class="text-lg">%</span></div>
+            <div class="mt-1.5 text-[11px] text-gray-500">z-score <span class="font-mono font-semibold ${zCls}">${z == null ? '—' : (z >= 0 ? '+' : '') + z.toFixed(2)}</span></div>
           </div>
-          <div class="ml-auto">${sparkline(histBasis.concat(basis), basis > 0 ? '#fbbf24' : '#38bdf8')}</div>
+          <div class="pt-1">${spark}</div>
         </div>
-        <div class="text-sm font-semibold ${sigCls} mb-2">${sig}</div>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
-          <div>${T('perp', 'perp')} <span class="font-mono text-gray-300">${fmtPx(pMid)}</span></div>
-          <div>${T('swap', 'swap')} <span class="font-mono text-gray-300">${fmtPx(sMid)}</span></div>
-          <div>${T('7d range', 'rango 7d')} <span class="font-mono text-gray-400">${lo.toFixed(2)}% / ${hi.toFixed(2)}%</span></div>
-          <div>${carryTxt ? `<span class="${carryEarn ? 'text-emerald-500' : 'text-rose-500'}">${carryTxt}</span>` : ''}</div>
+
+        <div class="mt-3">
+          ${meter(lo, hi, basis, p.c)}
+          <div class="flex justify-between text-[10px] font-mono text-gray-600 mt-0.5">
+            <span>${lo.toFixed(2)}%</span>
+            <span class="text-gray-500">${T('7d range', 'rango 7d')}</span>
+            <span>${hi.toFixed(2)}%</span>
+          </div>
         </div>
-        ${!haveHist ? `<div class="text-[11px] text-gray-600 mt-2">${T('building history — z-score arms after a few hours', 'acumulando histórico — el z-score se activa en unas horas')}</div>` : ''}
+
+        <div class="mt-3 text-[12px] font-semibold px-3 py-2 rounded-lg border ${sigCls}">${sig}</div>
+
+        <div class="mt-3 pt-3 border-t border-gray-800/70 grid grid-cols-2 gap-2 text-[11px]">
+          <div class="text-gray-500">${T('perp', 'perp')} <span class="font-mono text-gray-300 ml-1">${fmtPx(pMid)}</span></div>
+          <div class="text-gray-500 text-right">${T('swap', 'swap')} <span class="font-mono text-gray-300 ml-1">${fmtPx(sMid)}</span></div>
+          ${carryTxt ? `<div class="col-span-2 flex items-center gap-1.5 mt-0.5">
+            <span class="text-gray-500">${T('carry', 'carry')}</span>
+            <span class="inline-flex items-center gap-1 font-mono font-semibold ${carryEarn ? 'text-emerald-400' : 'text-rose-400'}">${carryEarn ? '▲' : '▼'} ${carryTxt}</span>
+          </div>` : ''}
+        </div>
+
+        ${!haveHist ? `<div class="text-[10px] text-gray-600 mt-2.5 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-gray-600 animate-pulse"></span>${T('building history — z-score arms after a few hours', 'acumulando histórico — el z-score se activa en unas horas')}</div>` : ''}
       </div>`;
   }
 
+  let busy = false;
   async function load() {
+    if (busy) return; busy = true;
+    const ico = $('refresh-ico'); ico && ico.classList.add('animate-spin');
     try {
-      const hr = await fetch('/history.json', { cache: 'no-store' });
-      if (hr.ok) { const h = await hr.json(); basisHist = h.basis || {}; }
-    } catch {}
-    try {
+      try {
+        const hr = await fetch('/history.json', { cache: 'no-store' });
+        if (hr.ok) { const h = await hr.json(); basisHist = h.basis || {}; }
+      } catch {}
       const r = await fetch('https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats');
       const j = await r.json();
       const byT = {};
       (j.listings || []).forEach((x) => { byT[x.ticker] = x; });
       $('cards').innerHTML = PAIRS.map((p) => card(p, byT)).join('');
-      $('status').textContent = T('Live · updates every 25s · ', 'En vivo · actualiza cada 25s · ') + new Date().toLocaleTimeString();
+      $('live-dot').className = 'w-2 h-2 rounded-full bg-green-500 animate-pulse';
+      $('status').textContent = T('Live · updated ', 'En vivo · actualizado ') + new Date().toLocaleTimeString();
     } catch (e) {
+      $('live-dot').className = 'w-2 h-2 rounded-full bg-rose-500';
       $('status').textContent = T('Could not reach Variational — retrying…', 'No se pudo conectar a Variational — reintentando…');
+    } finally {
+      busy = false;
+      setTimeout(() => ico && ico.classList.remove('animate-spin'), 400);
     }
   }
 
+  $('refresh').addEventListener('click', load);
   load();
   setInterval(load, 25000);
   window.addEventListener('storage', (e) => { if (e.key === 'lang') load(); });
