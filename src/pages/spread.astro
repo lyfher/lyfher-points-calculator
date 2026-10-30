@@ -109,6 +109,29 @@ import Layout from '../layouts/Layout.astro';
     </div>`;
   }
 
+  const fmtUsd = (v) => v == null ? '—' : (v >= 0 ? '$' : '-$') + Math.abs(v).toFixed(2);
+
+  // Fine-grained intraday log (every refresh) in localStorage, so stretches are
+  // visible NOW and we can measure how long one lasts — the hourly snapshot is too coarse.
+  function logTick(key, basis) {
+    const k = 'sp_tick_' + key; let a = [];
+    try { a = JSON.parse(localStorage.getItem(k) || '[]'); } catch {}
+    const last = a[a.length - 1];
+    if (!last || Date.now() - last[0] > 15000) a.push([Date.now(), +basis.toFixed(4)]);
+    const cut = Date.now() - 6 * 3600e3; a = a.filter((p) => p[0] >= cut);
+    try { localStorage.setItem(k, JSON.stringify(a)); } catch {}
+    return a;
+  }
+  // how long the basis has stayed on its current side of the mean (ms), from intraday ticks
+  function stretchAge(ticks, mu) {
+    if (ticks.length < 2) return null;
+    const side = Math.sign(ticks[ticks.length - 1][1] - mu);
+    let since = ticks[ticks.length - 1][0];
+    for (let i = ticks.length - 1; i >= 0; i--) { if (Math.sign(ticks[i][1] - mu) !== side) break; since = ticks[i][0]; }
+    return Date.now() - since;
+  }
+  const fmtAge = (ms) => ms == null ? '' : ms < 60000 ? '<1m' : ms < 3600e3 ? Math.round(ms / 60000) + 'm' : (ms / 3600e3).toFixed(1) + 'h';
+
   function card(p, x) {
     const name = lang() === 'es' ? p.es : p.key;
     const perp = x[p.perp], swap = x[p.swap];
@@ -132,31 +155,50 @@ import Layout from '../layouts/Layout.astro';
     const fund = parseFloat(perp.funding_rate) * 100;   // annualized %, Variational
     const atFair = Math.abs(basis) < NEAR;
 
+    // round-trip execution cost: cross half of each leg's bid/ask on entry AND exit
+    const halfSpread = (q, mid) => { const b = parseFloat(q?.quotes?.base?.bid), a = parseFloat(q?.quotes?.base?.ask); return (!isNaN(b) && !isNaN(a) && mid) ? ((a - b) / 2 / mid) * 100 : 0; };
+    const costPct = (halfSpread(perp, pMid) + halfSpread(swap, sMid)) * 2;
+    // the tradeable edge is reversion to the MEAN, not to 0 (the perp sits at a funding-driven premium)
+    const devPct = basis - mu;                 // signed distance from its own mean
+    const grossPct = Math.abs(devPct);         // captured if it fully reverts to the mean
+    const netPct = grossPct - costPct;         // after execution cost
+    const gapUsd = p.fair === 1 ? pMid - sMid : null;          // $ gap (metals, same scale)
+    const meanGapUsd = p.fair === 1 ? (mu / 100) * sMid : null; // normal $ gap at the mean
+    const netUsd = p.fair === 1 ? (netPct / 100) * pMid : null; // $ you'd net per unit after fees
+
+    const ticks = logTick(p.key, basis);
+    const age = fmtAge(stretchAge(ticks, mu));
+
     // direction pill
     const dir = atFair ? { t: T('At fair', 'En su justo'), cls: 'bg-gray-700/40 text-gray-400 border-gray-600/40' }
       : basis > 0 ? { t: T('Perp premium', 'Perp premium'), cls: 'bg-amber-500/10 text-amber-300 border-amber-500/25' }
       : { t: T('Perp discount', 'Perp discount'), cls: 'bg-sky-500/10 text-sky-300 border-sky-500/25' };
 
-    // signal
-    const stretched = z != null ? Math.abs(z) >= Z_SIGNAL : Math.abs(basis) >= 0.3;
+    // signal: must be stretched vs its mean AND leave a positive edge after fees
+    const stretched = z != null ? Math.abs(z) >= Z_SIGNAL : grossPct >= 0.1;
     let sig, sigCls;
-    if (stretched) {
-      const longLeg = basis > 0 ? p.swap : p.perp, shortLeg = basis > 0 ? p.perp : p.swap;
-      sig = `${T('Enter', 'Entrar')}: ▲ ${T('Long', 'Long')} ${longLeg} · ▼ ${T('Short', 'Short')} ${shortLeg}`;
+    if (stretched && netPct > 0) {
+      const longLeg = devPct > 0 ? p.swap : p.perp, shortLeg = devPct > 0 ? p.perp : p.swap;
+      sig = `${T('Enter', 'Entrar')}: ▲ ${longLeg} · ▼ ${shortLeg}`;
       sigCls = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+    } else if (stretched) {
+      sig = T('Stretched, but fees eat the edge', 'Estirado, pero los fees se lo comen');
+      sigCls = 'bg-amber-500/10 text-amber-300/80 border-amber-500/25';
     } else {
       sig = T('Neutral — wait for a stretch', 'Neutral — espera un estiramiento');
       sigCls = 'bg-gray-800/60 text-gray-400 border-gray-700/50';
     }
 
-    const shortPerp = basis > 0;
+    const shortPerp = devPct > 0;   // trade shorts the leg that's dear vs its own mean
     const carryEarn = shortPerp ? fund > 0 : fund < 0;
     const carryTxt = isNaN(fund) || fund === 0 ? null :
       `${Math.abs(fund).toFixed(1)}%/yr ${carryEarn ? T('in favor', 'a favor') : T('against', 'en contra')}`;
 
     const basisCls = atFair ? 'text-gray-300' : basis > 0 ? 'text-amber-300' : 'text-sky-300';
     const zCls = z == null ? 'text-gray-600' : Math.abs(z) >= Z_SIGNAL ? 'text-amber-300' : 'text-gray-300';
-    const spark = sparkline(histBasis.concat(basis), basis >= 0 ? '#fbbf24' : '#38bdf8');
+    // sparkline: prefer the finer intraday series once it has enough points, else hourly
+    const sparkData = ticks.length >= 8 ? ticks.map((t) => t[1]) : histBasis.concat(basis);
+    const spark = sparkline(sparkData, basis >= 0 ? '#fbbf24' : '#38bdf8');
 
     return `
       <div class="glow-card rounded-2xl border border-gray-800 bg-gradient-to-b from-gray-900/60 to-gray-900/20 p-5" style="--c:${p.c}">
@@ -189,9 +231,15 @@ import Layout from '../layouts/Layout.astro';
           </div>
         </div>
 
-        <div class="mt-3 text-[12px] font-semibold px-3 py-2 rounded-lg border ${sigCls}">${sig}</div>
+        <div class="mt-3 text-[12px] font-semibold px-3 py-2 rounded-lg border ${sigCls}">${sig}${stretched && age ? ` · ${age}` : ''}</div>
 
-        <div class="mt-3 pt-3 border-t border-gray-800/70 grid grid-cols-2 gap-2 text-[11px]">
+        <div class="mt-3 pt-3 border-t border-gray-800/70 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+          ${gapUsd != null ? `<div class="text-gray-500">${T('gap', 'gap')} <span class="font-mono text-gray-300 ml-1">${fmtUsd(gapUsd)}</span></div>
+          <div class="text-gray-500 text-right">${T('normal', 'normal')} <span class="font-mono text-gray-400 ml-1">${fmtUsd(meanGapUsd)}</span></div>` : ''}
+          <div class="col-span-2 flex items-center justify-between">
+            <span class="text-gray-500">${T('net edge after fees', 'edge neto tras fees')}</span>
+            <span class="font-mono font-semibold ${netPct > 0 ? 'text-emerald-400' : 'text-gray-500'}">${netPct > 0 ? '+' : ''}${netPct.toFixed(3)}%${netUsd != null ? ` · ${fmtUsd(netUsd)}` : ''}</span>
+          </div>
           <div class="text-gray-500">${T('perp', 'perp')} <span class="font-mono text-gray-300 ml-1">${fmtPx(pMid)}</span></div>
           <div class="text-gray-500 text-right">${T('swap', 'swap')} <span class="font-mono text-gray-300 ml-1">${fmtPx(sMid)}</span></div>
           ${carryTxt ? `<div class="col-span-2 flex items-center gap-1.5 mt-0.5">
