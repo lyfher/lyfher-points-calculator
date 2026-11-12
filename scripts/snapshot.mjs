@@ -19,6 +19,25 @@ const num = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
 const j = (r) => r.json();
 const normCoin = (s) => String(s).replace(/[-_/].*$/, "").replace(/USDT$|USDC$|USD$|PERP$/i, "").toUpperCase();
 
+// ── Market hours (TradFi): skip basis while a market is closed so weekends/off-hours
+// don't pollute the mean. ET parts via Intl → DST-correct. metals = CME ~24h weekdays;
+// equity = US cash session 09:30–16:00 ET. ──────────────────────────────────────────
+function etParts(d = new Date()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d).map((x) => [x.type, x.value]));
+  const wd = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[p.weekday];
+  let hh = +p.hour; if (hh === 24) hh = 0;
+  return { wd, min: hh * 60 + +p.minute };
+}
+function marketOpen(kind, d = new Date()) {
+  const { wd, min } = etParts(d);
+  if (kind === "equity") return wd >= 1 && wd <= 5 && min >= 9 * 60 + 30 && min < 16 * 60;
+  // metals: Sun 18:00 ET → Fri 17:00 ET
+  if (wd === 6) return false;
+  if (wd === 0) return min >= 18 * 60;
+  if (wd === 5) return min < 17 * 60;
+  return true;
+}
+
 const TXFLOW_MAJORS = [
   "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX","LINK","SUI","TON","TRX",
   "LTC","BCH","DOT","NEAR","APT","ARB","OP","INJ","TIA","SEI","PEPE","WIF",
@@ -187,7 +206,8 @@ async function main() {
     const vr = await fetch("https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats").then(j);
     const byT = {}; (vr.listings || []).forEach((x) => { byT[x.ticker] = x; });
     const vmid = (x) => { const b = num(x?.quotes?.base?.bid), a = num(x?.quotes?.base?.ask); return (b != null && a != null) ? (b + a) / 2 : num(x?.mark_price); };
-    for (const [key, perpT, swapT] of [["Gold", "XAU", "XAUS"], ["Silver", "XAG", "XAGS"], ["S&P 500", "US500", "US500S"]]) {
+    for (const [key, perpT, swapT, kind] of [["Gold", "XAU", "XAUS", "metals"], ["Silver", "XAG", "XAGS", "metals"], ["S&P 500", "US500", "US500S", "equity"]]) {
+      if (!marketOpen(kind)) continue;   // don't record basis while the market is closed
       const p = byT[perpT], s = byT[swapT]; if (!p || !s) continue;
       const pm = vmid(p), sm = vmid(s); if (pm == null || sm == null || sm === 0) continue;
       (hist.basis[key] ||= []).push([now, Math.round((pm / sm) * 1e6) / 1e6]);
