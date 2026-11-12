@@ -46,8 +46,8 @@ import Layout from '../layouts/Layout.astro';
          data-es="Basis — cuánto cotiza el perp por encima (premium) o por debajo (discount) de su swap spot. Oro y plata comparten subyacente, así que lo justo es 0%. En S&P 500 el perp es el ETF SPDR 1:10, así que lo justo es la media móvil del ratio."></p>
       <p data-en="z-score — how unusual today's basis is vs its own 7-day history. |z| ≥ 2 = stretched, mean-reversion edge. Arms after a few hours of history."
          data-es="z-score — qué tan inusual es el basis de hoy vs su historia de 7 días. |z| ≥ 2 = estirado, ventaja de reversión. Se activa tras unas horas de histórico."></p>
-      <p data-en="The meter shows where the current basis sits inside its 7-day range. Near an edge = stretched. The signal names which leg to long and which to short."
-         data-es="El medidor muestra dónde cae el basis actual dentro de su rango de 7 días. Cerca de un borde = estirado. La señal indica qué pata va long y cuál short."></p>
+      <p data-en="The meter: the dot is now, the bright tick is the normal (its mean — where it reverts to). The farther the dot from that tick, toward an edge, the more stretched = better entry. On the normal = wait."
+         data-es="El medidor: el punto es ahora, la línea brillante es la normal (su media — a donde revierte). Mientras más lejos el punto de esa línea, hacia un borde, más estirado = mejor entrada. Sobre la normal = esperar."></p>
       <p data-en="Carry — the perp funding you keep (or pay) while you wait for convergence. In your favor = time is on your side."
          data-es="Carry — el funding del perp que cobras (o pagas) mientras esperas la convergencia. A favor = el tiempo juega a tu favor."></p>
     </div>
@@ -121,16 +121,17 @@ import Layout from '../layouts/Layout.astro';
     </svg>`;
   }
 
-  // range meter: shows where current basis sits within its 7d [lo,hi] band, with a 0 tick
-  function meter(lo, hi, cur, color) {
-    const min = Math.min(lo, 0, cur), max = Math.max(hi, 0, cur), span = (max - min) || 1;
+  // range meter: dot = now, bright tick = normal (mean, the reversion target).
+  // The farther the dot sits from the normal tick (toward an edge), the more stretched = better entry.
+  function meter(lo, hi, cur, mu, color) {
+    const min = Math.min(lo, cur, mu), max = Math.max(hi, cur, mu), span = (max - min) || 1;
     const padf = span * 0.12, d0 = min - padf, d1 = max + padf, dspan = d1 - d0;
     const X = (v) => ((v - d0) / dspan) * 100;
-    const bandL = X(lo), bandR = X(hi), zx = X(0), cx = X(cur);
+    const bandL = X(lo), bandR = X(hi), mx = X(mu), cx = X(cur);
     return `<div class="relative h-6 mt-1">
       <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[3px] rounded-full bg-gray-800"></div>
-      <div class="absolute top-1/2 -translate-y-1/2 h-[3px] rounded-full" style="left:${bandL}%;width:${Math.max(bandR - bandL, 0.5)}%;background:${color}44"></div>
-      <div class="absolute top-1/2 -translate-y-1/2 w-px h-3 bg-gray-600" style="left:${zx}%"></div>
+      <div class="absolute top-1/2 -translate-y-1/2 h-[3px] rounded-full" style="left:${bandL}%;width:${Math.max(bandR - bandL, 0.5)}%;background:${color}33"></div>
+      <div class="absolute top-1/2 -translate-y-1/2 w-0.5 h-3.5 rounded bg-gray-400" style="left:${mx}%" title="normal"></div>
       <div class="absolute top-1/2 w-2.5 h-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-gray-950" style="left:${cx}%;background:${color};box-shadow:0 0 8px ${color}99"></div>
     </div>`;
   }
@@ -256,10 +257,10 @@ import Layout from '../layouts/Layout.astro';
         </div>
 
         <div class="mt-3">
-          ${meter(lo, hi, basis, p.c)}
+          ${meter(lo, hi, basis, mu, p.c)}
           <div class="flex justify-between text-[10px] font-mono text-gray-600 mt-0.5">
             <span>${lo.toFixed(2)}%</span>
-            <span class="text-gray-500">${T('7d range', 'rango 7d')}</span>
+            <span class="text-gray-500">┃ ${T('normal', 'normal')} ${mu.toFixed(2)}%</span>
             <span>${hi.toFixed(2)}%</span>
           </div>
         </div>
